@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Privacy Policy — FitOS</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<nav class="land-nav">
+  <a href="index.html" style="display:flex;align-items:center;gap:10px"><div class="logo-mark">F</div><span class="logo-text">Fit<span>OS</span></span></a>
+  <div class="land-nav-actions">
+    <a href="login.html" class="btn btn-ghost btn-sm">Log In</a>
+    <a href="signup.html" class="btn btn-primary btn-sm">Start Free</a>
+  </div>
+</nav>
+<div style="max-width:760px;margin:0 auto;padding:100px 24px 80px">
+  <h1 style="margin-bottom:8px">Privacy Policy</h1>
+  <p style="color:var(--text-2);margin-bottom:40px">Last updated: June 2026</p>
+
+  <div style="display:flex;flex-direction:column;gap:28px">
+    <div><h2 style="font-size:1.125rem;margin-bottom:10px">1. Data We Collect</h2><p style="color:var(--text-2);font-size:.9375rem;line-height:1.8">FitOS collects information you voluntarily provide: name, email address, fitness profile data (age, weight, height, goals), workout logs, nutrition entries, recovery check-ins, and Coach Center interactions. This data is stored in your personal Firebase Firestore database.</p></div>
+    <div><h2 style="font-size:1.125rem;margin-bottom:10px">2. Firebase & Data Storage</h2><p style="color:var(--text-2);font-size:.9375rem;line-height:1.8">Your data is stored in Google Firebase Firestore, protected by security rules that ensure only you — authenticated with your unique Firebase UID — can access your data. Firebase Analytics is used to understand aggregate usage patterns. No personally identifiable information is shared with analytics.</p></div>
+    <div><h2 style="font-size:1.125rem;margin-bottom:10px">3. How We Use Your Data</h2><p style="color:var(--text-2);font-size:.9375rem;line-height:1.8">Your data is used exclusively to power FitOS features: generating workout plans, tracking nutrition, providing recovery scores, and Coach Center guidance. We do not sell, rent, or share your personal data with any third parties.</p></div>
+    <div><h2 style="font-size:1.125rem;margin-bottom:10px">4. Data Ownership</h2><p style="color:var(--text-2);font-size:.9375rem;line-height:1.8">You own your data. You can export a complete copy at any time from the Export page. You can delete your account and all associated data permanently from the Account page. Deletion is irreversible.</p></div>
+    <div><h2 style="font-size:1.125rem;margin-bottom:10px">5. Security</h2><p style="color:var(--text-2);font-size:.9375rem;line-height:1.8">All data in transit is encrypted via HTTPS. Firestore security rules enforce per-user data isolation. Passwords are managed by Firebase Authentication and are never stored in plain text. We recommend using a strong, unique password and enabling Google Sign-In for additional security.</p></div>
+    <div><h2 style="font-size:1.125rem;margin-bottom:10px">6. Contact</h2><p style="color:var(--text-2);font-size:.9375rem;line-height:1.8">For privacy questions or data requests, contact us at <a href="contact.html" style="color:var(--brand)">our contact page</a>.</p></div>
+  </div>
+</div>
+<div id="toast-container"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+<script src="firebase-init.js"></script>
+</body>
+</html>
