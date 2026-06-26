@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Recovery — FitOS</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="loading-screen" id="loading"><div class="spinner"></div></div>
+<div class="app-shell" id="page" style="display:none">
+  <div class="main-content">
+    <div class="topbar">
+      <div class="page-title"><h1>Recovery</h1><p>Daily readiness check-in</p></div>
+      <div class="topbar-actions">
+        <button class="hamburger" id="hamburger"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <!-- Today's score -->
+      <div id="today-score-card" style="margin-bottom:24px"></div>
+
+      <!-- Check-in form -->
+      <div class="card" id="checkin-form">
+        <div class="modal-title" style="margin-bottom:4px">Today's Check-In</div>
+        <p style="font-size:.875rem;color:var(--text-2);margin-bottom:24px">Rate each factor from 1 (very poor) to 5 (excellent).</p>
+
+        <!-- Sleep quality -->
+        <div class="form-group" style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <label class="form-label" style="font-size:.9375rem">😴 Sleep Quality</label>
+            <span id="sleep-val" style="font-weight:700;color:var(--brand)">3/5</span>
+          </div>
+          <div style="display:flex;gap:6px" class="rating-row">
+            <button class="rating-btn" data-group="sleep" data-val="1">1<br><span style="font-size:.65rem;font-weight:400">Poor</span></button>
+            <button class="rating-btn" data-group="sleep" data-val="2">2<br><span style="font-size:.65rem;font-weight:400">Fair</span></button>
+            <button class="rating-btn active" data-group="sleep" data-val="3">3<br><span style="font-size:.65rem;font-weight:400">Okay</span></button>
+            <button class="rating-btn" data-group="sleep" data-val="4">4<br><span style="font-size:.65rem;font-weight:400">Good</span></button>
+            <button class="rating-btn" data-group="sleep" data-val="5">5<br><span style="font-size:.65rem;font-weight:400">Great</span></button>
+          </div>
+        </div>
+
+        <!-- Energy levels -->
+        <div class="form-group" style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <label class="form-label" style="font-size:.9375rem">⚡ Energy Levels</label>
+            <span id="energy-val" style="font-weight:700;color:var(--brand)">3/5</span>
+          </div>
+          <div style="display:flex;gap:6px" class="rating-row">
+            <button class="rating-btn" data-group="energy" data-val="1">1<br><span style="font-size:.65rem;font-weight:400">Drained</span></button>
+            <button class="rating-btn" data-group="energy" data-val="2">2<br><span style="font-size:.65rem;font-weight:400">Low</span></button>
+            <button class="rating-btn active" data-group="energy" data-val="3">3<br><span style="font-size:.65rem;font-weight:400">Okay</span></button>
+            <button class="rating-btn" data-group="energy" data-val="4">4<br><span style="font-size:.65rem;font-weight:400">Good</span></button>
+            <button class="rating-btn" data-group="energy" data-val="5">5<br><span style="font-size:.65rem;font-weight:400">High</span></button>
+          </div>
+        </div>
+
+        <!-- Muscle soreness (inverse — higher = worse = lower readiness) -->
+        <div class="form-group" style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <label class="form-label" style="font-size:.9375rem">💪 Muscle Soreness</label>
+            <span id="soreness-val" style="font-weight:700;color:var(--brand)">3/5</span>
+          </div>
+          <div style="display:flex;gap:6px" class="rating-row">
+            <button class="rating-btn" data-group="soreness" data-val="1">1<br><span style="font-size:.65rem;font-weight:400">None</span></button>
+            <button class="rating-btn" data-group="soreness" data-val="2">2<br><span style="font-size:.65rem;font-weight:400">Mild</span></button>
+            <button class="rating-btn active" data-group="soreness" data-val="3">3<br><span style="font-size:.65rem;font-weight:400">Moderate</span></button>
+            <button class="rating-btn" data-group="soreness" data-val="4">4<br><span style="font-size:.65rem;font-weight:400">High</span></button>
+            <button class="rating-btn" data-group="soreness" data-val="5">5<br><span style="font-size:.65rem;font-weight:400">Severe</span></button>
+          </div>
+          <div class="input-hint" style="margin-top:6px">⚠ Higher soreness = lower readiness score</div>
+        </div>
+
+        <!-- Stress level (inverse) -->
+        <div class="form-group" style="margin-bottom:24px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <label class="form-label" style="font-size:.9375rem">🧠 Stress / Mood</label>
+            <span id="stress-val" style="font-weight:700;color:var(--brand)">3/5</span>
+          </div>
+          <div style="display:flex;gap:6px" class="rating-row">
+            <button class="rating-btn" data-group="stress" data-val="1">1<br><span style="font-size:.65rem;font-weight:400">Calm</span></button>
+            <button class="rating-btn" data-group="stress" data-val="2">2<br><span style="font-size:.65rem;font-weight:400">Low</span></button>
+            <button class="rating-btn active" data-group="stress" data-val="3">3<br><span style="font-size:.65rem;font-weight:400">Average</span></button>
+            <button class="rating-btn" data-group="stress" data-val="4">4<br><span style="font-size:.65rem;font-weight:400">High</span></button>
+            <button class="rating-btn" data-group="stress" data-val="5">5<br><span style="font-size:.65rem;font-weight:400">Max</span></button>
+          </div>
+          <div class="input-hint" style="margin-top:6px">⚠ Higher stress = lower readiness score</div>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group" style="margin-bottom:20px">
+          <label class="form-label">Notes (optional)</label>
+          <textarea id="recovery-notes" class="form-control" rows="2" placeholder="Any notes about today's recovery?"></textarea>
+        </div>
+
+        <!-- Readiness preview -->
+        <div class="card card-brand" style="margin-bottom:16px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:.875rem;font-weight:600">Estimated Readiness</span>
+            <span id="preview-score" style="font-size:1.5rem;font-weight:900;color:var(--brand)">64</span>
+          </div>
+          <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" id="preview-bar" style="width:64%"></div></div>
+          <div id="preview-label" style="font-size:.8rem;color:var(--text-2);margin-top:6px">Moderate Load</div>
+        </div>
+
+        <button class="btn btn-primary btn-full btn-lg" id="save-checkin">Save Check-In →</button>
+      </div>
+
+      <!-- History -->
+      <div class="section" style="margin-top:24px">
+        <div class="section-title" style="margin-bottom:14px">Recovery History</div>
+        <div id="history-list" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast-container"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script src="nav.js"></script>
+<script>
+let ratings = { sleep:3, energy:3, soreness:3, stress:3 };
+let currentUser;
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('page').style.display = 'flex';
+  buildNav('recovery.html');
+  updatePreview();
+
+  const history = await FS.getAssessments(user.uid, 30);
+  const today = await FS.getTodayAssessment(user.uid, todayStr(), 'recovery');
+  if (today) renderTodayCard(today);
+  renderHistory(history.filter(a => a.type === 'recovery').slice(0, 14));
+});
+
+// Rating buttons
+document.querySelectorAll('.rating-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const group = btn.dataset.group;
+    const val   = parseInt(btn.dataset.val);
+    ratings[group] = val;
+    document.getElementById(`${group}-val`).textContent = `${val}/5`;
+    document.querySelectorAll(`.rating-btn[data-group="${group}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updatePreview();
+  });
+});
+
+function updatePreview() {
+  const score = calcReadiness(ratings.sleep, ratings.energy, ratings.soreness, ratings.stress);
+  const info  = readinessLabel(score);
+  document.getElementById('preview-score').textContent = score;
+  document.getElementById('preview-score').style.color = info.color;
+  document.getElementById('preview-bar').style.width   = `${score}%`;
+  document.getElementById('preview-bar').style.background = info.color;
+  document.getElementById('preview-label').textContent = info.label;
+}
+
+document.getElementById('save-checkin').addEventListener('click', async () => {
+  const btn = document.getElementById('save-checkin');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  const score = calcReadiness(ratings.sleep, ratings.energy, ratings.soreness, ratings.stress);
+  const info  = readinessLabel(score);
+  try {
+    await FS.saveAssessment(currentUser.uid, {
+      type: 'recovery',
+      date: todayStr(),
+      ...ratings,
+      readinessScore: score,
+      readinessLabel: info.label,
+      notes: document.getElementById('recovery-notes').value.trim(),
+    });
+    showToast(`Check-in saved! Readiness: ${score}/100 — ${info.label}`, 'success');
+    setTimeout(() => window.location.href = 'dashboard.html', 800);
+  } catch(e) {
+    showToast('Error saving. Please try again.', 'error');
+    btn.textContent = 'Save Check-In →'; btn.disabled = false;
+  }
+});
+
+function renderTodayCard(data) {
+  const info = readinessLabel(data.readinessScore);
+  document.getElementById('today-score-card').innerHTML = `
+    <div class="card card-brand card-glow" style="animation:glow 3s ease-in-out infinite">
+      <div style="display:flex;align-items:center;gap:20px">
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:3rem;font-weight:900;color:${info.color};line-height:1">${data.readinessScore}</div>
+          <div style="font-size:.75rem;color:var(--text-2)">/ 100</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:1.125rem;font-weight:700;color:${info.color};margin-bottom:6px">${info.label}</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${data.readinessScore}%;background:${info.color}"></div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:10px;font-size:.75rem;color:var(--text-2)">
+            <div>😴 Sleep: ${data.sleep}/5</div><div>⚡ Energy: ${data.energy}/5</div>
+            <div>💪 Soreness: ${data.soreness}/5</div><div>🧠 Stress: ${data.stress}/5</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:.8rem;color:var(--text-3)">✓ Today's check-in complete. Update below if needed.</div>
+    </div>`;
+}
+
+function renderHistory(history) {
+  const el = document.getElementById('history-list');
+  if (!history.length) { el.innerHTML = '<div class="empty" style="padding:20px"><div class="empty-icon">📊</div><p>No recovery history yet. Complete your first check-in!</p></div>'; return; }
+  el.innerHTML = history.map(d => {
+    const info = readinessLabel(d.readinessScore);
+    return `<div class="card card-sm" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-weight:600">${formatDate(d.date)}</div>
+        <div style="font-size:.75rem;color:var(--text-2)">Sleep:${d.sleep} Energy:${d.energy} Soreness:${d.soreness} Stress:${d.stress}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:1.25rem;font-weight:800;color:${info.color}">${d.readinessScore}</div>
+        <div style="font-size:.7rem;color:var(--text-3)">${info.label}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
