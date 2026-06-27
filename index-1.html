@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>FitOS — Your Intelligent Fitness Operating System</title>
+<meta name="description" content="FitOS is the world's most intelligent fitness platform. AI-powered workout plans, nutrition tracking, coach center, and real-time progress analytics — all in one place."/>
+<meta name="theme-color" content="#07090f"/>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.hero-grid { display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; max-width:1140px; margin:0 auto; padding:80px 6vw 60px }
+.hero-grid .hero-left { text-align:left }
+.hero-grid .hero-left p { margin-left:0 }
+.hero-grid .hero-cta { justify-content:flex-start }
+.hero-right { position:relative }
+.hero-mockup {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:20px;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+  position:relative;
+  overflow:hidden;
+}
+.hero-mockup::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg,var(--brand),var(--accent));
+}
+.mockup-topbar { display:flex; gap:6px; margin-bottom:16px }
+.mockup-dot { width:8px; height:8px; border-radius:50%; background:var(--border) }
+.mockup-metric-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px }
+.mockup-metric { background:var(--surface); border-radius:10px; padding:12px; border:1px solid var(--border) }
+.mockup-val { font-size:1.25rem; font-weight:800; color:var(--text) }
+.mockup-lbl { font-size:.65rem; color:var(--text-3); margin-top:2px; text-transform:uppercase; letter-spacing:.05em }
+.mockup-bar-row { display:flex; flex-direction:column; gap:8px }
+.mockup-bar { background:var(--surface); border-radius:8px; padding:10px 12px; border:1px solid var(--border) }
+.mockup-bar-top { display:flex; justify-content:space-between; font-size:.75rem; margin-bottom:6px }
+.mockup-bar-fill { height:5px; border-radius:3px; background:var(--border) }
+.mockup-bar-fill-inner { height:100%; border-radius:3px; background:var(--brand) }
+.float-badge {
+  position:absolute;
+  background:var(--card-2);
+  border:1px solid var(--border-light);
+  border-radius:10px;
+  padding:8px 12px;
+  font-size:.75rem; font-weight:600;
+  box-shadow:var(--shadow);
+  display:flex; align-items:center; gap:6px;
+}
+.float-badge.top-r { top:-16px; right:-16px }
+.float-badge.bot-l { bottom:-16px; left:-16px }
+.pulse-dot { width:8px; height:8px; border-radius:50%; background:var(--brand); animation:pulse 1.5s infinite }
+.testimonials-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:48px }
+.testi-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:24px }
+.testi-stars { color:#f59e0b; font-size:.875rem; margin-bottom:12px }
+.testi-text { font-size:.875rem; color:var(--text-2); line-height:1.7; margin-bottom:16px }
+.testi-author { font-size:.8125rem; font-weight:600 }
+.testi-meta { font-size:.7rem; color:var(--text-3) }
+.pricing-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:48px }
+.pricing-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px }
+.pricing-card.featured { border-color:rgba(16,217,160,.3); background:linear-gradient(135deg,var(--brand-soft),rgba(99,102,241,.04)) }
+.pricing-name { font-size:.875rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-2); margin-bottom:12px }
+.pricing-price { font-size:2.5rem; font-weight:900; letter-spacing:-.04em; margin-bottom:4px }
+.pricing-price span { font-size:1rem; font-weight:500; color:var(--text-2) }
+.pricing-sub { font-size:.8125rem; color:var(--text-3); margin-bottom:20px }
+.pricing-features { list-style:none; display:flex; flex-direction:column; gap:8px; margin-bottom:24px }
+.pricing-features li { font-size:.875rem; color:var(--text-2); display:flex; gap:8px; align-items:flex-start }
+.pricing-features li::before { content:'✓'; color:var(--brand); font-weight:700; flex-shrink:0 }
+@media (max-width:900px) {
+  .hero-grid { grid-template-columns:1fr; text-align:center; padding:80px 5vw 40px }
+  .hero-grid .hero-left p,.hero-grid .hero-cta { margin:0 auto; justify-content:center }
+  .hero-right { display:none }
+  .testimonials-grid,.pricing-grid { grid-template-columns:1fr }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="land-nav">
+  <a href="index.html" style="display:flex;align-items:center;gap:10px">
+    <div class="logo-mark">F</div>
+    <span class="logo-text">Fit<span>OS</span></span>
+  </a>
+  <div class="land-nav-links">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+  </div>
+  <div class="land-nav-actions">
+    <a href="login.html" class="btn btn-ghost btn-sm">Log In</a>
+    <a href="signup.html" class="btn btn-primary btn-sm">Start Free</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section style="padding-top:68px">
+  <div class="hero-grid">
+    <div class="hero-left">
+      <div class="hero-badge">
+        <span class="pulse-dot"></span>
+        #1 Fitness Platform for Serious Athletes
+      </div>
+      <h1 class="display">Your Fitness.<br><span style="color:var(--brand)">Fully Intelligent.</span><br>Always On.</h1>
+      <p style="font-size:1.125rem;color:var(--text-2);margin:20px 0 32px;max-width:480px">FitOS adapts to your body, goals, and lifestyle. AI-generated workout plans, precision nutrition tracking, smart recovery scores — all synced in real time to Firebase.</p>
+      <div class="hero-cta">
+        <a href="signup.html" class="btn btn-primary btn-lg">Start For Free →</a>
+        <a href="login.html" class="btn btn-secondary btn-lg">I have an account</a>
+      </div>
+      <div style="margin-top:28px;display:flex;align-items:center;gap:16px">
+        <div style="display:flex">
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#10d9a0,#6366f1);border:2px solid var(--bg)"></div>
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#ef4444);border:2px solid var(--bg);margin-left:-8px"></div>
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#10d9a0);border:2px solid var(--bg);margin-left:-8px"></div>
+        </div>
+        <div style="font-size:.8125rem;color:var(--text-2)"><strong style="color:var(--text)">12,400+</strong> athletes already training smarter</div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div style="position:relative;padding:20px">
+        <div class="float-badge top-r">
+          <span class="pulse-dot"></span>
+          <span style="color:var(--brand)">Live Sync Active</span>
+        </div>
+        <div class="hero-mockup">
+          <div class="mockup-topbar">
+            <div class="mockup-dot" style="background:#ef4444"></div>
+            <div class="mockup-dot" style="background:#f59e0b"></div>
+            <div class="mockup-dot" style="background:#22c55e"></div>
+          </div>
+          <div style="font-size:.7rem;color:var(--text-3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.08em">Today's Overview</div>
+          <div class="mockup-metric-row">
+            <div class="mockup-metric">
+              <div class="mockup-val" style="color:var(--brand)">87</div>
+              <div class="mockup-lbl">Readiness</div>
+            </div>
+            <div class="mockup-metric">
+              <div class="mockup-val">1,840</div>
+              <div class="mockup-lbl">Calories</div>
+            </div>
+            <div class="mockup-metric">
+              <div class="mockup-val">4</div>
+              <div class="mockup-lbl">Workouts</div>
+            </div>
+          </div>
+          <div class="mockup-bar-row">
+            <div class="mockup-bar">
+              <div class="mockup-bar-top"><span>Protein</span><span style="color:var(--brand)">142g / 180g</span></div>
+              <div class="mockup-bar-fill"><div class="mockup-bar-fill-inner" style="width:79%"></div></div>
+            </div>
+            <div class="mockup-bar">
+              <div class="mockup-bar-top"><span>Carbs</span><span style="color:var(--accent)">230g / 280g</span></div>
+              <div class="mockup-bar-fill"><div class="mockup-bar-fill-inner" style="width:82%;background:var(--accent)"></div></div>
+            </div>
+            <div class="mockup-bar">
+              <div class="mockup-bar-top"><span>Workout Progress</span><span style="color:var(--warning)">3/4 Sets</span></div>
+              <div class="mockup-bar-fill"><div class="mockup-bar-fill-inner" style="width:75%;background:var(--warning)"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="float-badge bot-l">
+          🔥 <span>Streak: <strong style="color:var(--brand)">23 days</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section class="section-land" style="padding-top:0">
+  <div class="inner">
+    <div class="stats-row">
+      <div class="stat-box"><div class="num">12K+</div><div class="lbl">Active Athletes</div></div>
+      <div class="stat-box"><div class="num">4.9★</div><div class="lbl">Average Rating</div></div>
+      <div class="stat-box"><div class="num">98%</div><div class="lbl">Goal Completion</div></div>
+      <div class="stat-box"><div class="num">2M+</div><div class="lbl">Workouts Logged</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="section-land" id="features">
+  <div class="inner">
+    <div class="section-badge">Features</div>
+    <h2>Everything your body needs.<br><span style="color:var(--brand)">Nothing you don't.</span></h2>
+    <p class="section-sub mt-3">FitOS combines intelligent planning, precision tracking, and real-time sync into one seamless experience — backed by Firebase.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--brand-soft);font-size:24px">🧠</div>
+        <h3>AI Workout Generator</h3>
+        <p>Your 13-step onboarding feeds into a plan engine that creates progressive overload programs tailored to your goals, equipment, injuries, and lifestyle.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(99,102,241,.1);font-size:24px">🥗</div>
+        <h3>Precision Nutrition</h3>
+        <p>160+ item food database including Indian staples, global foods, and supplements. Log meals, track macros, and see your calories in real time.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(245,158,11,.1);font-size:24px">👨‍🏫</div>
+        <h3>Coach Center</h3>
+        <p>50+ guided pathways across strength, fat loss, mobility, mindset, and sport-specific training. Your personal coach that learns from your history.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(34,197,94,.1);font-size:24px">📈</div>
+        <h3>Progress Analytics</h3>
+        <p>Visual charts for weight trend, strength progress, weekly consistency, and macros over time. Know exactly where you stand.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(239,68,68,.1);font-size:24px">❤️</div>
+        <h3>Recovery Intelligence</h3>
+        <p>Daily readiness score based on sleep quality, energy levels, muscle soreness, and stress. Train hard when it counts. Rest when you need to.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(16,217,160,.1);font-size:24px">🔄</div>
+        <h3>Real-Time Sync</h3>
+        <p>Firebase Firestore keeps your data in sync across all devices. Log on your phone, see it on your laptop — instantly. Works offline too.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(99,102,241,.1);font-size:24px">📋</div>
+        <h3>21-Day Assessments</h3>
+        <p>Every 3 weeks, FitOS reviews your progress and updates your program automatically — keeping you in the optimal training zone.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(245,158,11,.1);font-size:24px">📤</div>
+        <h3>Data Export</h3>
+        <p>Your data belongs to you. Export everything — workouts, nutrition logs, progress, assessments — as JSON or CSV anytime.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(34,197,94,.1);font-size:24px">🔒</div>
+        <h3>Private & Secure</h3>
+        <p>Firestore security rules ensure only you can access your data. Firebase Auth with Google and email login. No data sharing, ever.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="section-land" id="how-it-works" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="inner">
+    <div class="section-badge">Process</div>
+    <h2>From zero to elite in<br><span style="color:var(--brand)">under 5 minutes.</span></h2>
+    <div class="steps-grid">
+      <div class="step-box">
+        <div class="step-num">01</div>
+        <div>
+          <h3>Create Your Account</h3>
+          <p>Sign up with email or Google. Firebase Auth gives you a permanent UID — your identity across all devices forever.</p>
+        </div>
+      </div>
+      <div class="step-box">
+        <div class="step-num">02</div>
+        <div>
+          <h3>Complete Onboarding</h3>
+          <p>13 intelligent questions about your goals, body, equipment, lifestyle, injuries, and schedule. Stored instantly to Firestore.</p>
+        </div>
+      </div>
+      <div class="step-box">
+        <div class="step-num">03</div>
+        <div>
+          <h3>Get Your Plan</h3>
+          <p>FitOS generates a complete periodized workout program based on your profile. Full Body, Upper/Lower, or PPL — auto-selected.</p>
+        </div>
+      </div>
+      <div class="step-box">
+        <div class="step-num">04</div>
+        <div>
+          <h3>Train & Track</h3>
+          <p>Log workouts set-by-set, scan food, check in daily recovery, and use Coach Center between sessions for guidance.</p>
+        </div>
+      </div>
+      <div class="step-box">
+        <div class="step-num">05</div>
+        <div>
+          <h3>Get Smarter Over Time</h3>
+          <p>21-day assessments review your data and update your program. FitOS learns your body and gets more precise every cycle.</p>
+        </div>
+      </div>
+      <div class="step-box">
+        <div class="step-num">06</div>
+        <div>
+          <h3>Always In Sync</h3>
+          <p>Close the tab. Open it on your phone. Everything is there — Firestore real-time sync means zero data loss, ever.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials -->
+<section class="section-land" id="testimonials">
+  <div class="inner">
+    <div class="section-badge">Testimonials</div>
+    <h2>Real athletes. <span style="color:var(--brand)">Real results.</span></h2>
+    <div class="testimonials-grid">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"The Coach Center alone is worth it. I've been stuck at 75kg for two years. FitOS gave me a pathway-based plan and I broke through in 6 weeks."</p>
+        <div class="testi-author">Rohan Mehta</div>
+        <div class="testi-meta">Software Engineer, Mumbai • 23 weeks on FitOS</div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"I travel constantly. Having everything sync across my laptop and phone in real time — even offline — is a game changer. Nothing else works like this."</p>
+        <div class="testi-author">Priya Sharma</div>
+        <div class="testi-meta">Marketing Director, Bangalore • 14 months on FitOS</div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"The Indian food database is incredible. Dal tadka, roti, sambar — everything is there. Finally a fitness app that understands how I actually eat."</p>
+        <div class="testi-author">Aditya Nair</div>
+        <div class="testi-meta">Athlete, Chennai • 8 months on FitOS</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="section-land" id="pricing" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="inner" style="text-align:center">
+    <div class="section-badge">Pricing</div>
+    <h2>Simple. Transparent. <span style="color:var(--brand)">Fair.</span></h2>
+    <p class="section-sub" style="margin:12px auto 0">Start free. No credit card required. Upgrade when you're ready.</p>
+    <div class="pricing-grid" style="max-width:860px;margin:48px auto 0">
+      <div class="pricing-card">
+        <div class="pricing-name">Free</div>
+        <div class="pricing-price">₹0 <span>/ mo</span></div>
+        <div class="pricing-sub">Forever free. No card needed.</div>
+        <ul class="pricing-features">
+          <li>Full workout tracking</li>
+          <li>Nutrition logging (160+ foods)</li>
+          <li>Basic Coach Center</li>
+          <li>Recovery check-ins</li>
+          <li>Firebase sync on 1 device</li>
+        </ul>
+        <a href="signup.html" class="btn btn-secondary btn-full">Get Started Free</a>
+      </div>
+      <div class="pricing-card featured">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="pricing-name" style="color:var(--brand)">Pro</div>
+          <span class="badge badge-brand">Most Popular</span>
+        </div>
+        <div class="pricing-price">₹499 <span>/ mo</span></div>
+        <div class="pricing-sub">Billed monthly. Cancel anytime.</div>
+        <ul class="pricing-features">
+          <li>Everything in Free</li>
+          <li>All 50+ Coach pathways</li>
+          <li>21-day auto-assessment</li>
+          <li>Advanced analytics</li>
+          <li>Unlimited device sync</li>
+          <li>Data export (JSON + CSV)</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="signup.html" class="btn btn-primary btn-full">Start Pro Free Trial</a>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-name">Elite</div>
+        <div class="pricing-price">₹999 <span>/ mo</span></div>
+        <div class="pricing-sub">For competitive athletes.</div>
+        <ul class="pricing-features">
+          <li>Everything in Pro</li>
+          <li>Custom plan builder</li>
+          <li>Sport-specific programs</li>
+          <li>1:1 AI coaching sessions</li>
+          <li>Bloodwork & labs integration</li>
+          <li>White-label export</li>
+        </ul>
+        <a href="signup.html" class="btn btn-secondary btn-full">Contact Us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section-land" id="faq">
+  <div class="inner" style="text-align:center">
+    <div class="section-badge">FAQ</div>
+    <h2>Frequently Asked <span style="color:var(--brand)">Questions</span></h2>
+    <div class="faq-list" style="text-align:left">
+      <div class="faq-item">
+        <div class="faq-q">Is my data safe? <span class="faq-arrow">▾</span></div>
+        <div class="faq-a">Yes. All data is stored in your personal Firebase Firestore database. Security rules ensure only you — authenticated with your UID — can read or write your own data. We never sell or share your data.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Does it work offline? <span class="faq-arrow">▾</span></div>
+        <div class="faq-a">Yes. FitOS enables Firestore offline persistence. You can log workouts and food even without internet. When you reconnect, everything syncs automatically to Firestore.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Is there an Indian food database? <span class="faq-arrow">▾</span></div>
+        <div class="faq-a">Absolutely. FitOS has 100+ Indian food items including dal tadka, roti, paneer, biryani, idli, sambar, poha, and many more — all with accurate macro data. Perfect for Indian athletes.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How is the workout plan generated? <span class="faq-arrow">▾</span></div>
+        <div class="faq-a">During 13-step onboarding, you provide your goals, fitness level, equipment, injuries, and schedule. FitOS uses this to select the optimal split (Full Body, Upper/Lower, or PPL) and generates a complete periodized program stored in Firestore.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I use it on multiple devices? <span class="faq-arrow">▾</span></div>
+        <div class="faq-a">Yes. Because everything is stored in Firebase, you can log in from any device and your data is always up to date. Real-time Firestore listeners update your dashboard automatically across tabs and devices.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What if I cancel? <span class="faq-arrow">▾</span></div>
+        <div class="faq-a">Your account and free tier features remain active. You can export all your data anytime. We never delete your Firestore data — it belongs to you.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section-land" style="background:var(--surface);border-top:1px solid var(--border);text-align:center">
+  <div class="inner">
+    <div style="max-width:560px;margin:0 auto">
+      <div class="hero-badge" style="margin-bottom:20px;display:inline-flex">🔥 Join 12,400+ athletes training smarter</div>
+      <h2>Your best training year<br>starts <span style="color:var(--brand)">right now.</span></h2>
+      <p style="color:var(--text-2);margin:16px 0 28px">Free forever. Firebase-powered. Built for serious athletes who want more than a spreadsheet.</p>
+      <a href="signup.html" class="btn btn-primary btn-lg">Create Free Account →</a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="land-footer">
+  <div class="inner">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="logo-mark" style="width:28px;height:28px;font-size:13px">F</div>
+      <span class="logo-text" style="font-size:1rem">Fit<span>OS</span></span>
+    </div>
+    <div class="footer-links">
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <div style="font-size:.8125rem;color:var(--text-3)">© 2026 FitOS. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Firebase SDK (compat — works with script tags) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+// If already logged in, redirect to dashboard
+auth.onAuthStateChanged(user => {
+  if (user) window.location.href = 'dashboard.html';
+});
+
+// FAQ accordion
+document.querySelectorAll('.faq-q').forEach(q => {
+  q.addEventListener('click', () => {
+    const item = q.parentElement;
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  });
+});
+</script>
+</body>
+</html>
