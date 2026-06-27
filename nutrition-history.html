@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#f7f7fb" id="meta-theme-color"/>
+<title>Nutrition History — FitOS</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="loading-screen" id="loading"><div class="spinner"></div></div>
+<div class="app-shell" id="page" style="display:none">
+  <div class="main-content">
+    <div class="topbar">
+      <div class="page-title"><h1>Nutrition History</h1><p>Every meal you've logged</p></div>
+      <div class="topbar-actions">
+        <button class="hamburger" id="hamburger" aria-label="Open navigation menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <a href="nutrition-log.html" class="btn btn-primary btn-sm">+ Log Food</a>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <!-- Summary -->
+      <div class="metric-grid" style="margin-bottom:24px">
+        <div class="metric-card"><div class="metric-label">Days Logged</div><div class="metric-value" id="days-logged">0</div><div class="metric-sub">all time</div></div>
+        <div class="metric-card"><div class="metric-label">Avg Calories</div><div class="metric-value" id="avg-cal">—</div><div class="metric-sub">per day</div></div>
+        <div class="metric-card"><div class="metric-label">Avg Protein</div><div class="metric-value" id="avg-protein">—</div><div class="metric-sub">grams/day</div></div>
+        <div class="metric-card"><div class="metric-label">Best Day</div><div class="metric-value" id="best-protein">—</div><div class="metric-sub">protein (g)</div></div>
+      </div>
+
+      <!-- History -->
+      <div id="history-container">
+        <div class="empty"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="day-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="day-detail"></div>
+    <button class="btn btn-secondary btn-full" style="margin-top:14px" onclick="closeDayModal()">Close</button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script src="nav.js"></script>
+<script>
+let history = [];
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('page').style.display = 'flex';
+  buildNav('nutrition.html');
+  history = await FS.getNutritionHistory(user.uid, 90);
+
+  if (history.length) {
+    document.getElementById('days-logged').textContent = history.length;
+    const avgCal = Math.round(history.reduce((s,l)=>s+(l.totalCalories||0),0)/history.length);
+    const avgPro = Math.round(history.reduce((s,l)=>s+(l.totalProtein||0),0)/history.length);
+    const bestP  = Math.max(...history.map(l=>l.totalProtein||0));
+    document.getElementById('avg-cal').textContent     = avgCal;
+    document.getElementById('avg-protein').textContent = avgPro + 'g';
+    document.getElementById('best-protein').textContent = bestP + 'g';
+  }
+  renderHistory();
+});
+
+function renderHistory() {
+  const container = document.getElementById('history-container');
+  if (!history.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">🥗</div><h3>No nutrition logs yet</h3><p>Start logging your meals to see history here.</p><a href="nutrition-log.html" class="btn btn-primary" style="margin-top:14px">Log First Meal →</a></div>';
+    return;
+  }
+  const groups = {};
+  history.forEach(l => {
+    const d = new Date(l.date);
+    const key = d.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(l);
+  });
+  container.innerHTML = Object.entries(groups).map(([month, days]) => `
+    <div class="section">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);margin-bottom:10px">${month}</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        ${days.map((l,i) => {
+          const calPct = Math.min(100, Math.round(((l.totalCalories||0)/2000)*100));
+          return `<div onclick="openDay(${history.indexOf(l)})" style="padding:14px 16px;border-bottom:${i<days.length-1?'1px solid var(--border)':'none'};cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--card-hover)'" onmouseleave="this.style.background=''">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <div style="font-weight:600">${formatDate(l.date)}</div>
+              <span style="font-weight:700;color:var(--brand)">${l.totalCalories||0} kcal</span>
+            </div>
+            <div style="display:flex;gap:12px;font-size:.75rem;color:var(--text-2);margin-bottom:6px">
+              <span>P: ${l.totalProtein||0}g</span><span>C: ${l.totalCarbs||0}g</span><span>F: ${l.totalFat||0}g</span>
+              <span>${(l.entries||[]).length} items</span>
+            </div>
+            <div class="progress-bar" style="height:4px"><div class="progress-fill" style="width:${calPct}%"></div></div>
+          </div>`;}).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function openDay(idx) {
+  const l = history[idx];
+  document.getElementById('day-detail').innerHTML = `
+    <div class="modal-title">${formatDate(l.date)}</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <span class="badge badge-brand">${l.totalCalories||0} kcal</span>
+      <span class="badge badge-purple">P:${l.totalProtein||0}g</span>
+      <span class="badge badge-yellow">C:${l.totalCarbs||0}g</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      ${(l.entries||[]).map(e => `
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+          <div><div style="font-weight:500">${esc(e.name)}</div><div style="font-size:.75rem;color:var(--text-2)">${esc(e.serving)}</div></div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-weight:700;color:var(--brand)">${e.calories} kcal</div>
+            <div style="font-size:.7rem;color:var(--text-3)">P:${e.protein}g C:${e.carbs}g F:${e.fat}g</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  document.getElementById('day-modal').classList.add('show');
+}
+function closeDayModal() { document.getElementById('day-modal').classList.remove('show'); }
+document.getElementById('day-modal').addEventListener('click', e => { if (e.target===document.getElementById('day-modal')) closeDayModal(); });
+</script>
+</body>
+</html>
