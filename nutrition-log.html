@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#f7f7fb" id="meta-theme-color"/>
+<title>Log Food — FitOS</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+/* ── Serving size picker ─────────────────────────────────── */
+.serving-modal-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,.48); backdrop-filter: blur(4px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.serving-modal-overlay.show { opacity: 1; pointer-events: all; }
+.serving-sheet {
+  background: var(--card); border-radius: 20px 20px 0 0;
+  padding: 20px 20px 32px; width: 100%; max-width: 520px;
+  max-height: 90vh; overflow-y: auto;
+  transform: translateY(30px);
+  transition: transform .22s cubic-bezier(.22,1,.36,1);
+}
+.serving-modal-overlay.show .serving-sheet { transform: translateY(0); }
+.sheet-handle {
+  width: 36px; height: 4px; background: var(--border);
+  border-radius: 99px; margin: 0 auto 18px;
+}
+.sheet-food-name { font-size: 1.1rem; font-weight: 800; margin-bottom: 2px; }
+.sheet-base-info { font-size: .8rem; color: var(--text-2); margin-bottom: 18px; }
+
+/* Mode tabs */
+.serving-mode-tabs {
+  display: flex; gap: 0; margin-bottom: 18px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.serving-mode-tab {
+  flex: 1; padding: 9px 8px; text-align: center;
+  font-size: .82rem; font-weight: 700;
+  background: var(--surface); color: var(--text-2);
+  border: none; cursor: pointer;
+  transition: all .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.serving-mode-tab.active { background: var(--brand); color: #fff; }
+
+/* Visual portion grid */
+.portion-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 16px;
+}
+.portion-btn {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding: 12px 10px;
+  border: 2px solid var(--border); border-radius: var(--radius);
+  background: var(--card); cursor: pointer;
+  transition: all .15s; -webkit-tap-highlight-color: transparent;
+}
+.portion-btn:active { transform: scale(.97); }
+.portion-btn.selected { border-color: var(--brand); background: var(--brand-soft); }
+.portion-emoji { font-size: 1.8rem; line-height: 1; }
+.portion-label { font-size: .82rem; font-weight: 700; color: var(--text); }
+.portion-sublabel { font-size: .7rem; color: var(--text-2); text-align: center; }
+.portion-multiplier { font-size: .7rem; color: var(--brand); font-weight: 700; }
+
+/* Gram input mode */
+.gram-input-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px;
+}
+.gram-input {
+  flex: 1; border: none; background: transparent;
+  font-size: 1.2rem; font-weight: 700; color: var(--text);
+  outline: none; width: 80px;
+}
+.gram-unit { font-size: .9rem; color: var(--text-2); font-weight: 600; }
+.gram-stepper { display: flex; gap: 6px; }
+.gram-step-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: var(--card);
+  font-size: 1rem; font-weight: 800; color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.gram-step-btn:active { background: var(--brand-soft); }
+
+/* Live macro preview */
+.macro-preview {
+  background: var(--surface); border-radius: var(--radius-sm);
+  padding: 12px 14px; margin-bottom: 16px;
+}
+.macro-preview-title { font-size: .7rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-3); margin-bottom: 8px; }
+.macro-preview-row { display: flex; justify-content: space-between; }
+.macro-preview-item { text-align: center; }
+.macro-preview-val { font-size: 1.1rem; font-weight: 800; color: var(--brand); }
+.macro-preview-lbl { font-size: .68rem; color: var(--text-3); text-transform: uppercase; font-weight: 600; }
+.macro-preview-cal { font-size: 1.4rem; font-weight: 900; color: var(--text); }
+</style>
+</head>
+<body>
+<div class="loading-screen" id="loading"><div class="spinner"></div></div>
+<div class="app-shell" id="page" style="display:none">
+  <div class="main-content">
+    <div class="topbar">
+      <div class="page-title"><h1>Log Food</h1><p id="date-label">Today</p></div>
+      <div class="topbar-actions">
+        <button class="hamburger" id="hamburger" aria-label="Open navigation menu" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <a href="nutrition.html" class="btn btn-secondary btn-sm">← Back</a>
+      </div>
+    </div>
+
+    <div class="page-content">
+
+      <!-- Search -->
+      <div class="card mb-6" style="margin-bottom:20px">
+        <div class="form-control-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="food-search" class="form-control" placeholder="Search 10,300+ foods (try: paneer, chicken, oats…)" style="padding-left:38px"/>
+        </div>
+        <div id="search-results" style="margin-top:2px;border-radius:0 0 10px 10px;overflow:hidden;border:1px solid var(--border);border-top:none;display:none"></div>
+      </div>
+
+      <!-- Quick categories -->
+      <div class="section">
+        <div class="section-title" style="margin-bottom:10px">Quick Add by Category</div>
+        <div class="chip-grid" id="category-chips"></div>
+      </div>
+
+      <!-- Category results -->
+      <div class="section" id="category-section" style="display:none">
+        <div class="section-header">
+          <div class="section-title" id="cat-title">Category</div>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('category-section').style.display='none'">✕ Close</button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden"><div id="cat-results"></div></div>
+      </div>
+
+      <!-- Custom food form -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Add Custom Food</div>
+          <button class="btn btn-ghost btn-sm" id="toggle-custom">Show →</button>
+        </div>
+        <div id="custom-form" style="display:none">
+          <div class="card">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Food Name</label>
+                <input type="text" id="c-name" class="form-control" placeholder="e.g. Grilled Salmon"/>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Serving Description</label>
+                <input type="text" id="c-serving" class="form-control" placeholder="e.g. 1 bowl, 100g, half plate"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Calories (kcal)</label>
+                <input type="number" id="c-cal" class="form-control" placeholder="0"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Protein (g)</label>
+                <input type="number" id="c-p" class="form-control" placeholder="0"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Carbs (g)</label>
+                <input type="number" id="c-c" class="form-control" placeholder="0"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fat (g)</label>
+                <input type="number" id="c-f" class="form-control" placeholder="0"/>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-full" style="margin-top:14px" id="add-custom-btn">Add Custom Food</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's log -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Today's Log</div>
+          <div id="today-totals" style="font-size:.8125rem;font-weight:700;color:var(--brand)"></div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden"><div id="log-list"></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── Serving Size Picker Sheet ─────────────────────────── -->
+<div class="serving-modal-overlay" id="serving-modal">
+  <div class="serving-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-food-name" id="sheet-food-name">Food</div>
+    <div class="sheet-base-info" id="sheet-base-info">Base: 100g serving</div>
+
+    <!-- Mode tabs -->
+    <div class="serving-mode-tabs">
+      <button class="serving-mode-tab active" id="tab-visual" onclick="switchServingMode('visual')">🍽️ Visual Portions</button>
+      <button class="serving-mode-tab" id="tab-grams" onclick="switchServingMode('grams')">⚖️ Grams / mL</button>
+    </div>
+
+    <!-- Visual portions -->
+    <div id="mode-visual">
+      <div class="portion-grid" id="portion-grid"></div>
+    </div>
+
+    <!-- Grams input -->
+    <div id="mode-grams" style="display:none">
+      <div class="gram-input-row">
+        <input type="number" id="gram-input" class="gram-input" value="100" min="1" max="2000" oninput="updateGramPreview()"/>
+        <span class="gram-unit" id="gram-unit-label">g</span>
+        <div class="gram-stepper">
+          <button class="gram-step-btn" onclick="stepGrams(-25)">−</button>
+          <button class="gram-step-btn" onclick="stepGrams(25)">+</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-secondary btn-sm" onclick="setGrams(50)">50g</button>
+        <button class="btn btn-secondary btn-sm" onclick="setGrams(75)">75g</button>
+        <button class="btn btn-secondary btn-sm" onclick="setGrams(100)">100g</button>
+        <button class="btn btn-secondary btn-sm" onclick="setGrams(150)">150g</button>
+        <button class="btn btn-secondary btn-sm" onclick="setGrams(200)">200g</button>
+        <button class="btn btn-secondary btn-sm" onclick="setGrams(250)">250g</button>
+      </div>
+    </div>
+
+    <!-- Live macro preview -->
+    <div class="macro-preview" id="macro-preview">
+      <div class="macro-preview-title">Nutrition for this serving</div>
+      <div class="macro-preview-row">
+        <div class="macro-preview-item">
+          <div class="macro-preview-cal" id="prev-cal">—</div>
+          <div class="macro-preview-lbl">kcal</div>
+        </div>
+        <div class="macro-preview-item">
+          <div class="macro-preview-val" id="prev-p">—</div>
+          <div class="macro-preview-lbl">protein</div>
+        </div>
+        <div class="macro-preview-item">
+          <div class="macro-preview-val" id="prev-c">—</div>
+          <div class="macro-preview-lbl">carbs</div>
+        </div>
+        <div class="macro-preview-item">
+          <div class="macro-preview-val" id="prev-f">—</div>
+          <div class="macro-preview-lbl">fat</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="confirm-serving-btn" onclick="confirmServing()" style="padding:14px;font-size:1rem">
+      ✓ Add to Log
+    </button>
+    <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="closeServingModal()">Cancel</button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script src="nav.js"></script>
+<script src="foods.js"></script>
+<script>
+
+// ── Visual portion definitions ────────────────────────────
+// mult = grams / 100 (base is always per 100g)
+// The first entry "1 Serving" is added dynamically per food in openServingModal()
+const BASE_PORTIONS = [
+  { emoji:'🤏', label:'Quarter Plate',   sublabel:'~1/4 of a dinner plate',  grams:75,  servingDesc:'Quarter plate' },
+  { emoji:'🍽️', label:'Half Plate',      sublabel:'~half a dinner plate',    grams:150, servingDesc:'Half plate' },
+  { emoji:'🥘', label:'Full Plate',      sublabel:'A full dinner plate',     grams:250, servingDesc:'Full plate' },
+  { emoji:'🥣', label:'Small Bowl',      sublabel:'~200ml bowl',             grams:120, servingDesc:'Small bowl' },
+  { emoji:'🍲', label:'One Bowl',        sublabel:'Standard serving bowl',   grams:200, servingDesc:'One bowl' },
+  { emoji:'🫙', label:'Large Bowl',      sublabel:'Big bowl / full meal',    grams:300, servingDesc:'Large bowl' },
+  { emoji:'🥄', label:'1 Tablespoon',    sublabel:'~15g',                    grams:15,  servingDesc:'1 tablespoon' },
+  { emoji:'🍵', label:'1 Cup',           sublabel:'~240ml / 240g',           grams:240, servingDesc:'1 cup' },
+  { emoji:'🫱', label:'Small Handful',   sublabel:'~30g (nuts/seeds/snacks)',grams:30,  servingDesc:'Small handful' },
+  { emoji:'🤲', label:'Large Handful',   sublabel:'~60g',                    grams:60,  servingDesc:'Large handful' },
+  { emoji:'1️⃣', label:'1 Piece/Unit',    sublabel:'One whole item',          grams:100, servingDesc:'1 piece' },
+  { emoji:'2️⃣', label:'2 Pieces/Units',  sublabel:'Two whole items',         grams:200, servingDesc:'2 pieces' },
+];
+let VISUAL_PORTIONS = BASE_PORTIONS; // rebuilt per food in openServingModal()
+
+// ── Serving modal state ───────────────────────────────────
+let pendingFood = null;       // { id?, name, cal, p, c, fat, serving }
+let selectedPortion = null;   // { mult, grams, servingDesc }
+let servingMode = 'visual';
+let currentUser, todayLog = null, unsubLog;
+
+// ── Auth ──────────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('page').style.display = 'flex';
+  buildNav('nutrition.html');
+  document.getElementById('date-label').textContent =
+    new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'});
+
+  const CAT_LABELS = {
+    Grains:    '🌾 Grains & Rice',
+    Fruits:    '🍎 Fruits',
+    Vegetables:'🥦 Vegetables',
+    Curries:   '🍛 Curries & Mains',
+    Meals:     '🍽️ Meals & Thalis',
+    FastFood:  '🍔 Fast Food',
+    Snacks:    '🍿 Snacks & Packaged',
+    // Legacy original db cats
+    Indian:       '🇮🇳 Indian',
+    'South Indian':'🥥 South Indian',
+    Protein:      '💪 Protein',
+    Dairy:        '🥛 Dairy',
+    Nuts:         '🥜 Nuts & Seeds',
+    Seeds:        '🌱 Seeds',
+    Fats:         '🫒 Fats & Oils',
+    Supplement:   '🧪 Supplements',
+    Other:        '🍴 Other',
+  };
+  const cats = [...new Set(FOOD_DB.map(f => f.cat))].sort();
+  document.getElementById('category-chips').innerHTML =
+    cats.map(c => `<button class="chip" onclick="showCategory('${c}')">${CAT_LABELS[c] || c}</button>`).join('');
+
+  todayLog = await FS.getTodayNutrition(user.uid, todayStr());
+  renderLog();
+
+  if (unsubLog) unsubLog();
+  unsubLog = FS.onNutritionToday(user.uid, todayStr(), data => {
+    todayLog = data; renderLog();
+  });
+});
+
+// ── Search ────────────────────────────────────────────────
+let searchTimeout;
+document.getElementById('food-search').addEventListener('input', e => {
+  clearTimeout(searchTimeout);
+  const q = e.target.value.trim();
+  const resultsEl = document.getElementById('search-results');
+  if (!q) { resultsEl.style.display='none'; return; }
+  searchTimeout = setTimeout(() => {
+    const results = searchFoods(q);
+    resultsEl.innerHTML = results.length
+      ? results.map(f => foodResultHTML(f)).join('')
+      : '<div style="padding:12px 16px;color:var(--text-2);font-size:.875rem">No foods found. Try adding a custom food below.</div>';
+    resultsEl.style.display = 'block';
+  }, 200);
+});
+
+function foodResultHTML(f) {
+  return `<div class="food-result" onclick="openServingModal('${f.id}', null)">
+    <div>
+      <div class="food-name">${esc(f.name)}</div>
+      <div class="food-serving">${esc(f.desc || f.serving)}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="food-kcal">${f.cal} kcal</div>
+      <div class="food-macros">P:${f.p}g C:${f.c}g F:${f.fat}g</div>
+    </div>
+  </div>`;
+}
+
+function showCategory(cat) {
+  const foods = FOOD_DB.filter(f => f.cat === cat);
+  document.getElementById('cat-title').textContent = cat;
+  document.getElementById('cat-results').innerHTML = foods.map(f => foodResultHTML(f)).join('');
+  document.getElementById('category-section').style.display = 'block';
+  document.getElementById('category-section').scrollIntoView({behavior:'smooth'});
+}
+
+// ── Serving modal ─────────────────────────────────────────
+function openServingModal(foodId, customFood) {
+  let food;
+  if (customFood) {
+    food = customFood;
+  } else {
+    food = FOOD_DB.find(f => f.id === foodId);
+    if (!food) return;
+    food = { id: food.id, name: food.name, cal: food.cal, p: food.p, c: food.c, fat: food.fat, serving: food.serving, servingGrams: food.servingGrams || 100 };
+  }
+  pendingFood = food;
+
+  // Build VISUAL_PORTIONS: "1 Serving" first (using real serving size), then the rest
+  const sg = food.servingGrams || 100;
+  const oneServing = { emoji:'⭐', label:'1 Serving', sublabel: food.serving || sg + 'g', grams: sg, servingDesc:'1 serving' };
+  VISUAL_PORTIONS = [oneServing, ...BASE_PORTIONS];
+  selectedPortion = VISUAL_PORTIONS[0]; // default: 1 serving
+
+  document.getElementById('sheet-food-name').textContent = food.name;
+  document.getElementById('sheet-base-info').textContent =
+    `Base: ${food.serving} = ${food.cal} kcal · P:${food.p}g C:${food.c}g F:${food.fat}g`;
+
+  switchServingMode('visual');
+  renderPortionGrid();
+  updateMacroPreview();
+  document.getElementById('serving-modal').classList.add('show');
+
+  // Close search
+  document.getElementById('food-search').value = '';
+  document.getElementById('search-results').style.display = 'none';
+}
+
+function closeServingModal() {
+  document.getElementById('serving-modal').classList.remove('show');
+  pendingFood = null;
+  selectedPortion = null;
+}
+
+function switchServingMode(mode) {
+  servingMode = mode;
+  document.getElementById('tab-visual').classList.toggle('active', mode === 'visual');
+  document.getElementById('tab-grams').classList.toggle('active', mode === 'grams');
+  document.getElementById('mode-visual').style.display = mode === 'visual' ? 'block' : 'none';
+  document.getElementById('mode-grams').style.display = mode === 'grams' ? 'block' : 'none';
+  updateMacroPreview();
+}
+
+function renderPortionGrid() {
+  const grid = document.getElementById('portion-grid');
+  grid.innerHTML = VISUAL_PORTIONS.map((p, i) => `
+    <button class="portion-btn ${selectedPortion === p ? 'selected' : ''}" id="portion-${i}"
+      onclick="selectPortion(${i})">
+      <div class="portion-emoji">${p.emoji}</div>
+      <div class="portion-label">${p.label}</div>
+      <div class="portion-sublabel">${p.sublabel}</div>
+      <div class="portion-multiplier">${p.grams}g</div>
+    </button>`).join('');
+}
+
+function selectPortion(i) {
+  selectedPortion = VISUAL_PORTIONS[i];
+  document.querySelectorAll('.portion-btn').forEach((b, idx) =>
+    b.classList.toggle('selected', idx === i));
+  updateMacroPreview();
+}
+
+function updateGramPreview() { updateMacroPreview(); }
+
+function stepGrams(delta) {
+  const input = document.getElementById('gram-input');
+  input.value = Math.max(1, Math.min(2000, (parseInt(input.value) || 100) + delta));
+  updateMacroPreview();
+}
+
+function setGrams(g) {
+  document.getElementById('gram-input').value = g;
+  updateMacroPreview();
+}
+
+function getMultiplier() {
+  if (servingMode === 'grams') {
+    const grams = parseInt(document.getElementById('gram-input').value) || 100;
+    return grams / 100; // base is always per 100g
+  }
+  // Use grams from selectedPortion / 100
+  return selectedPortion ? selectedPortion.grams / 100 : 1;
+}
+
+function updateMacroPreview() {
+  if (!pendingFood) return;
+  const mult = getMultiplier();
+  const cal = Math.round(pendingFood.cal * mult);
+  const p   = Math.round(pendingFood.p   * mult * 10) / 10;
+  const c   = Math.round(pendingFood.c   * mult * 10) / 10;
+  const f   = Math.round(pendingFood.fat * mult * 10) / 10;
+  document.getElementById('prev-cal').textContent = cal;
+  document.getElementById('prev-p').textContent   = p + 'g';
+  document.getElementById('prev-c').textContent   = c + 'g';
+  document.getElementById('prev-f').textContent   = f + 'g';
+}
+
+async function confirmServing() {
+  if (!pendingFood) return;
+  const mult = getMultiplier();
+  let servingDesc;
+  if (servingMode === 'grams') {
+    const grams = parseInt(document.getElementById('gram-input').value) || 100;
+    servingDesc = `${grams}g`;
+  } else {
+    servingDesc = selectedPortion?.servingDesc || '1 serving';
+  }
+
+  const entry = {
+    foodId:   pendingFood.id || null,
+    name:     pendingFood.name,
+    serving:  servingDesc,
+    calories: Math.round(pendingFood.cal * mult),
+    protein:  Math.round(pendingFood.p   * mult * 10) / 10,
+    carbs:    Math.round(pendingFood.c   * mult * 10) / 10,
+    fat:      Math.round(pendingFood.fat * mult * 10) / 10,
+    addedAt:  new Date().toISOString(),
+  };
+
+  const btn = document.getElementById('confirm-serving-btn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    await saveEntry(entry);
+    showToast(`${esc(pendingFood.name)} (${servingDesc}) added! 🎉`, 'success');
+    closeServingModal();
+  } catch(e) {
+    showToast('Error adding food. Try again.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ Add to Log';
+  }
+}
+
+// ── Save / log ────────────────────────────────────────────
+async function saveEntry(entry) {
+  const uid = currentUser.uid;
+  const date = todayStr();
+  const entries = [...(todayLog?.entries||[]), entry];
+  const totals = calcTotals(entries);
+  const logId = await FS.saveNutritionLog(uid, {
+    ...(todayLog || {}), logId: todayLog?.logId, date, entries, ...totals,
+  });
+  todayLog = { ...(todayLog||{}), logId, date, entries, ...totals };
+  renderLog();
+}
+
+function calcTotals(entries) {
+  return entries.reduce((acc, e) => ({
+    totalCalories: Math.round(acc.totalCalories + (e.calories||0)),
+    totalProtein:  Math.round(acc.totalProtein  + (e.protein||0)),
+    totalCarbs:    Math.round(acc.totalCarbs    + (e.carbs||0)),
+    totalFat:      Math.round(acc.totalFat      + (e.fat||0)),
+  }), {totalCalories:0,totalProtein:0,totalCarbs:0,totalFat:0});
+}
+
+// ── Render log ────────────────────────────────────────────
+function renderLog() {
+  const entries = todayLog?.entries || [];
+  const el = document.getElementById('log-list');
+  const totalEl = document.getElementById('today-totals');
+  totalEl.textContent = entries.length ? `${todayLog.totalCalories||0} kcal total` : '';
+  if (!entries.length) {
+    el.innerHTML = '<div class="empty" style="padding:32px"><div class="empty-icon">🍽️</div><h3>Nothing logged yet</h3><p>Search for a food or browse categories above.</p></div>';
+    return;
+  }
+  el.innerHTML = entries.map((e, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:.9rem">${esc(e.name)}</div>
+        <div style="font-size:.75rem;color:var(--text-2)">${esc(e.serving)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="text-align:right">
+          <div style="font-weight:700;color:var(--brand)">${e.calories} kcal</div>
+          <div style="font-size:.7rem;color:var(--text-3)">P:${e.protein}g C:${e.carbs}g F:${e.fat}g</div>
+        </div>
+        <button onclick="removeEntry(${i})"
+          style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:18px;line-height:1;-webkit-tap-highlight-color:transparent">×</button>
+      </div>
+    </div>`).join('');
+}
+
+async function removeEntry(idx) {
+  if (!todayLog?.logId) return;
+  const entries = [...(todayLog.entries||[])];
+  entries.splice(idx, 1);
+  const totals = calcTotals(entries);
+  await FS.saveNutritionLog(currentUser.uid, { logId: todayLog.logId, date: todayStr(), entries, ...totals });
+  todayLog = { ...todayLog, entries, ...totals };
+  renderLog();
+  showToast('Entry removed.', 'success');
+}
+
+// ── Custom food form ──────────────────────────────────────
+document.getElementById('toggle-custom').addEventListener('click', () => {
+  const form = document.getElementById('custom-form');
+  const btn  = document.getElementById('toggle-custom');
+  const open = form.style.display === 'none';
+  form.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? 'Hide ↑' : 'Show →';
+});
+
+document.getElementById('add-custom-btn').addEventListener('click', () => {
+  const name    = document.getElementById('c-name').value.trim();
+  const serving = document.getElementById('c-serving').value.trim() || '1 serving';
+  const cal     = parseFloat(document.getElementById('c-cal').value) || 0;
+  const p       = parseFloat(document.getElementById('c-p').value)   || 0;
+  const c       = parseFloat(document.getElementById('c-c').value)   || 0;
+  const f       = parseFloat(document.getElementById('c-f').value)   || 0;
+  if (!name) { showToast('Enter a food name', 'error'); return; }
+  if (!cal || cal < 1) { showToast('Enter calories (min 1)', 'error'); return; }
+  if (cal > 9999) { showToast('Calories seem too high — check your entry', 'error'); return; }
+  // Open serving picker with custom food
+  openServingModal(null, { name, serving, cal, p, c, fat: f });
+});
+
+// ── Backdrop close ────────────────────────────────────────
+document.getElementById('serving-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('serving-modal')) closeServingModal();
+});
+</script>
+</body>
+</html>
