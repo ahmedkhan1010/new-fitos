@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#f7f7fb" id="meta-theme-color"/>
+<title>Workouts — FitOS</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+/* ── Workout Page Enhancements ─── */
+.plan-badge {
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.18);border-radius:999px;
+  padding:4px 12px;font-size:.75rem;font-weight:700;
+  backdrop-filter:blur(8px);
+}
+.day-card {
+  background:var(--card);border:1.5px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+}
+.day-card:hover { border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-soft); }
+.day-card-header {
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+.day-num-badge {
+  width:36px;height:36px;border-radius:10px;
+  background:var(--brand-soft);color:var(--brand);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:.875rem;flex-shrink:0;
+  transition:all .2s;
+}
+.day-card.open .day-num-badge { background:var(--brand);color:#fff; }
+.day-card-body { display:none; }
+.day-card.open .day-card-body { display:block; }
+.day-chevron { margin-left:auto;color:var(--text-3);transition:transform .2s;flex-shrink:0; }
+.day-card.open .day-chevron { transform:rotate(180deg); }
+.ex-row {
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:.875rem;padding:8px 0;
+  border-bottom:1px solid var(--border);
+}
+.ex-row:last-of-type { border-bottom:none; }
+.ex-row-name { font-weight:600;color:var(--text); }
+.ex-row-meta { color:var(--text-2);font-size:.8rem; }
+/* Muscle group chips */
+.muscle-chips { display:flex;flex-wrap:wrap;gap:6px;margin-top:8px; }
+.muscle-chip-sm {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:99px;padding:3px 9px;font-size:.7rem;
+  font-weight:600;color:var(--text-2);
+}
+/* AI Plan Builder Modal */
+.ai-modal-overlay {
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(4px);
+  z-index:300;align-items:flex-end;justify-content:center;
+  pointer-events:none;
+}
+.ai-modal-overlay.show { display:flex; pointer-events:all; }
+.ai-modal {
+  background:var(--card);border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  padding:24px 20px 32px;width:100%;max-width:520px;
+  max-height:90vh;overflow-y:auto;
+}
+.ai-modal-handle { width:36px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 20px; }
+.ai-modal-title { font-size:1.1rem;font-weight:800;margin-bottom:4px; }
+.ai-modal-sub { font-size:.85rem;color:var(--text-2);margin-bottom:20px; }
+.ai-stream-box {
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:14px;
+  font-size:.85rem;line-height:1.6;color:var(--text);
+  min-height:60px;max-height:280px;overflow-y:auto;
+  white-space:pre-wrap;
+}
+.ai-thinking { display:flex;align-items:center;gap:8px;color:var(--text-2);font-size:.85rem; }
+.ai-dot { width:6px;height:6px;border-radius:50%;background:var(--brand);animation:ai-pulse 1.2s ease-in-out infinite; }
+.ai-dot:nth-child(2){ animation-delay:.2s; }
+.ai-dot:nth-child(3){ animation-delay:.4s; }
+@keyframes ai-pulse { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+/* Quick-action bar */
+.quick-actions {
+  display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;
+  scrollbar-width:none;margin-bottom:20px;
+}
+.quick-actions::-webkit-scrollbar { display:none; }
+.quick-action-btn {
+  flex-shrink:0;display:flex;align-items:center;gap:6px;
+  background:var(--card);border:1.5px solid var(--border);
+  border-radius:99px;padding:8px 14px;font-size:.8rem;
+  font-weight:600;color:var(--text);cursor:pointer;
+  transition:all .18s ease;white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;
+}
+.quick-action-btn:hover { border-color:var(--brand);color:var(--brand);background:var(--brand-soft); }
+/* Plan reason card */
+.plan-reason-card {
+  background:var(--brand-soft);border-left:3px solid var(--brand);
+  border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+  padding:10px 14px;font-size:.82rem;color:var(--brand);
+  line-height:1.5;margin-bottom:16px;
+}
+/* Coach notes */
+.coach-note {
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:.82rem;color:var(--text-2);padding:6px 0;
+  border-bottom:1px solid var(--border);
+}
+.coach-note:last-child { border-bottom:none; }
+/* Progression rules badge */
+.prog-badge {
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:99px;padding:4px 10px;font-size:.75rem;font-weight:600;
+  color:var(--text-2);
+}
+/* Stats card color coding */
+.metric-card.highlight { border-color:var(--brand);background:var(--brand-soft); }
+.metric-card.highlight .metric-value { color:var(--brand); }
+</style>
+</head>
+<body>
+<div class="loading-screen" id="loading"><div class="spinner"></div></div>
+<div class="app-shell" id="page" style="display:none">
+  <div class="main-content">
+    <div class="topbar">
+      <div class="page-title">
+        <h1>Workouts</h1>
+        <p>Your training program & history</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="hamburger" id="hamburger" aria-label="Open navigation menu" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <a href="workout-current.html" class="btn btn-primary btn-sm">▶ Start Workout</a>
+      </div>
+    </div>
+
+    <div class="page-content">
+
+      <!-- Active Plan Card -->
+      <div class="card card-brand mb-6" style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <div>
+            <div class="label" style="margin-bottom:6px;opacity:.75">Active Plan</div>
+            <h2 id="plan-name" style="font-size:1.375rem;margin-bottom:4px">Loading…</h2>
+            <p id="plan-meta" style="font-size:.875rem;opacity:.8"></p>
+            <div id="plan-badges" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            <button class="btn btn-secondary btn-sm" onclick="location.href='workout-current.html'">▶ Start</button>
+            <button class="btn btn-secondary btn-sm" id="view-history-btn" onclick="location.href='workout-history.html'">📋 History</button>
+            <button class="btn btn-secondary btn-sm" id="ai-plan-btn">✨ Rebuild Plan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="quick-action-btn" onclick="location.href='workout-current.html'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Start Today's Workout
+        </button>
+        <button class="quick-action-btn" id="swap-day-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          Swap Today's Day
+        </button>
+        <button class="quick-action-btn" onclick="location.href='workout-history.html'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Workout History
+        </button>
+        <button class="quick-action-btn" id="coach-notes-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Coach Notes
+        </button>
+        <button class="quick-action-btn" onclick="location.href='progress.html'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          View Progress
+        </button>
+      </div>
+
+      <!-- Plan Intelligence Reason -->
+      <div id="plan-reason" style="display:none" class="plan-reason-card"></div>
+
+      <!-- Weekly split -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Your Weekly Schedule</div>
+          <span id="split-badge" class="badge badge-brand"></span>
+        </div>
+        <div id="workout-days" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="section">
+        <div class="section-title" style="margin-bottom:14px">Monthly Stats</div>
+        <div class="metric-grid">
+          <div class="metric-card" id="stat-card-workouts">
+            <div class="metric-label">Workouts</div>
+            <div class="metric-value" id="stat-total">—</div>
+            <div class="metric-sub">this month</div>
+          </div>
+          <div class="metric-card" id="stat-card-volume">
+            <div class="metric-label">Volume</div>
+            <div class="metric-value" id="stat-volume">—</div>
+            <div class="metric-sub">total sets</div>
+          </div>
+          <div class="metric-card" id="stat-card-duration">
+            <div class="metric-label">Avg Duration</div>
+            <div class="metric-value" id="stat-duration">—</div>
+            <div class="metric-sub">minutes</div>
+          </div>
+          <div class="metric-card" id="stat-card-streak">
+            <div class="metric-label">Streak</div>
+            <div class="metric-value" id="stat-streak">—</div>
+            <div class="metric-sub">weeks</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent logs -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">Recent Sessions</div>
+          <a href="workout-history.html" class="btn btn-ghost btn-sm">All →</a>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="recent-logs">
+            <div class="empty" style="padding:32px">
+              <div class="empty-icon">🏋️</div>
+              <h3>No workouts yet</h3>
+              <p>Start your first session and it will appear here.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Swap Day Modal -->
+<div class="ai-modal-overlay" id="swap-modal">
+  <div class="ai-modal">
+    <div class="ai-modal-handle"></div>
+    <div class="ai-modal-title">Swap Today's Day</div>
+    <div class="ai-modal-sub">Choose a different workout to do today instead.</div>
+    <div id="swap-day-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button class="btn btn-secondary btn-full" style="margin-top:16px" onclick="document.getElementById('swap-modal').classList.remove('show')">Cancel</button>
+  </div>
+</div>
+
+<!-- Coach Notes Modal -->
+<div class="ai-modal-overlay" id="coach-notes-modal">
+  <div class="ai-modal">
+    <div class="ai-modal-handle"></div>
+    <div class="ai-modal-title">🧠 Your Coach's Notes</div>
+    <div class="ai-modal-sub">Personalized guidance built into your plan.</div>
+    <div id="coach-notes-list" style="display:flex;flex-direction:column;gap:2px"></div>
+    <div id="coach-progression" style="margin-top:16px"></div>
+    <button class="btn btn-secondary btn-full" style="margin-top:16px" onclick="document.getElementById('coach-notes-modal').classList.remove('show')">Got it ✓</button>
+  </div>
+</div>
+
+<!-- AI Plan Rebuild Modal -->
+<div class="ai-modal-overlay" id="ai-modal">
+  <div class="ai-modal">
+    <div class="ai-modal-handle"></div>
+    <div class="ai-modal-title">✨ AI Plan Builder</div>
+    <div class="ai-modal-sub" id="ai-modal-sub">Regenerate your plan from your latest profile and goals.</div>
+
+    <!-- Step 1: Confirm -->
+    <div id="ai-step-confirm">
+      <div id="ai-profile-summary" class="card card-sm" style="margin-bottom:16px;font-size:.85rem;line-height:1.7"></div>
+      <p style="font-size:.82rem;color:var(--text-2);margin-bottom:16px">Your current plan will be archived. A new intelligent plan will be generated based on the above profile. You can always view your old workouts in History.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary" style="flex:1" onclick="closeAIModal()">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" id="ai-confirm-btn" onclick="runAIPlanBuild()">✨ Build My Plan</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Generating -->
+    <div id="ai-step-generating" style="display:none">
+      <div class="ai-stream-box" id="ai-stream-box">
+        <div class="ai-thinking">
+          <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+          <span>Analyzing your profile…</span>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:.8rem;color:var(--text-3);text-align:center">This may take a few seconds…</div>
+    </div>
+
+    <!-- Step 3: Done -->
+    <div id="ai-step-done" style="display:none">
+      <div style="text-align:center;margin-bottom:14px;font-size:2rem">🎉</div>
+      <div id="ai-done-summary" style="font-size:.875rem;color:var(--text-2);margin-bottom:16px;text-align:center"></div>
+      <button class="btn btn-primary btn-full" onclick="closeAIModal();location.reload()">View My New Plan →</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script src="nav.js"></script>
+<script>
+// ── Muscle group display map ──────────────────────────────
+const MUSCLE_MAP = {
+  'Squat':                 ['Quads','Glutes','Core'],
+  'Back Squat':            ['Quads','Glutes','Hamstrings'],
+  'Front Squat':           ['Quads','Core'],
+  'Deadlift':              ['Posterior Chain','Lower Back','Glutes'],
+  'Romanian Deadlift':     ['Hamstrings','Glutes','Lower Back'],
+  'Hip Thrust':            ['Glutes','Hamstrings'],
+  'Bench Press':           ['Chest','Triceps','Front Delts'],
+  'Dumbbell Bench Press':  ['Chest','Triceps'],
+  'Incline Dumbbell Press':['Upper Chest','Triceps'],
+  'Push-up':               ['Chest','Triceps','Core'],
+  'Overhead Press':        ['Shoulders','Triceps','Core'],
+  'Dumbbell Shoulder Press':['Shoulders','Triceps'],
+  'Pull-up / Pulldown':    ['Lats','Biceps','Rear Delts'],
+  'Lat Pulldown':          ['Lats','Biceps'],
+  'Row':                   ['Lats','Rhomboids','Biceps'],
+  'Barbell Row':           ['Lats','Traps','Biceps'],
+  'Dumbbell Row':          ['Lats','Rear Delts'],
+  'Lateral Raise':         ['Side Delts'],
+  'Face Pull':             ['Rear Delts','Rotator Cuff'],
+  'Biceps Curl':           ['Biceps'],
+  'Triceps Pressdown':     ['Triceps'],
+  'Plank':                 ['Core','Anti-Rotation'],
+  'Leg Press':             ['Quads','Glutes'],
+  'Bulgarian Split Squat': ['Quads','Glutes','Balance'],
+  'Leg Curl':              ['Hamstrings'],
+  'Calf Raise':            ['Calves'],
+};
+
+function getMuscles(name) {
+  const key = Object.keys(MUSCLE_MAP).find(k => name.toLowerCase().includes(k.toLowerCase()));
+  return key ? MUSCLE_MAP[key] : [];
+}
+
+// ── State ──────────────────────────────────────────────────
+let activePlan = null;
+let userProfile = null;
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('page').style.display = 'flex';
+  buildNav('workouts.html');
+
+  // Load profile + plan first (hits local cache — fast)
+  const profile = await FS.getProfile(user.uid);
+  userProfile = profile || {};
+
+  const plan = await FS.getActivePlan(user.uid, profile);
+  activePlan = plan;
+
+  // Render plan immediately with what we have
+  renderPlanHeader(plan);
+  renderWorkoutDays(plan);
+  setupButtons(user, profile);
+
+  // Load logs in background — don't block plan display
+  FS.getWorkoutLogs(user.uid, 60).then(logs => {
+    renderStats(logs);
+    renderRecentLogs(logs);
+  });
+
+  // Auto-trigger difficulty rebuild if coming from workout page
+  const urlParams = new URLSearchParams(window.location.search);
+  const rebuildParam = urlParams.get('rebuild');
+  if (rebuildParam === 'easier' || rebuildParam === 'harder') {
+    // Clean URL
+    window.history.replaceState({}, '', 'workouts.html');
+    const diffLabel = rebuildParam === 'easier' ? '📉 Easier' : '📈 Harder';
+    showToast(`Building ${diffLabel} plan…`, 'info');
+    await rebuildPlanAtDifficulty(user.uid, profile, rebuildParam);
+  } else if (rebuildParam === '1') {
+    window.history.replaceState({}, '', 'workouts.html');
+    document.getElementById('ai-plan-btn').click();
+  }
+});
+
+function renderPlanHeader(plan) {
+  if (!plan) {
+    document.getElementById('plan-name').textContent = 'No active plan';
+    document.getElementById('plan-meta').textContent = 'Complete onboarding to generate your plan.';
+    return;
+  }
+  document.getElementById('plan-name').textContent =
+    `${plan.splitType || 'Custom'} Program`;
+  document.getElementById('plan-meta').textContent =
+    `${plan.workoutDays} days/week · Goal: ${plan.primaryGoal}`;
+
+  // Badges
+  const badgesEl = document.getElementById('plan-badges');
+  const badges = [
+    plan.splitType,
+    plan.fitnessLevel?.split(' ')[0],
+    plan.engineVersion ? `v${plan.engineVersion}` : null,
+  ].filter(Boolean);
+  badgesEl.innerHTML = badges.map(b =>
+    `<span class="plan-badge">${esc(b)}</span>`
+  ).join('');
+  document.getElementById('split-badge').textContent = plan.splitType || '';
+
+  // Show reason card
+  if (plan.reasonForCreation) {
+    const reasonEl = document.getElementById('plan-reason');
+    reasonEl.textContent = '🧠 ' + plan.reasonForCreation;
+    reasonEl.style.display = 'block';
+  }
+}
+
+function renderWorkoutDays(plan) {
+  const daysEl = document.getElementById('workout-days');
+  if (!plan || !(plan.weeks || []).length) {
+    daysEl.innerHTML = `<div class="card" style="padding:24px;text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">🏗️</div>
+      <h3 style="margin-bottom:6px">No plan yet</h3>
+      <p style="font-size:.85rem;color:var(--text-2);margin-bottom:14px">Complete onboarding or use ✨ Rebuild Plan to generate one.</p>
+      <a href="onboarding.html" class="btn btn-primary btn-sm">Set Up Profile →</a>
+    </div>`;
+    return;
+  }
+
+  const today = new Date().getDay(); // 0=Sun
+  const suggestedIdx = today % plan.weeks.length;
+
+  daysEl.innerHTML = plan.weeks.map((w, i) => {
+    const isToday = i === suggestedIdx;
+    const muscles = [...new Set(w.exercises.flatMap(ex => getMuscles(ex.name)))].slice(0, 4);
+    return `
+    <div class="day-card" id="day-card-${i}">
+      <div class="day-card-header" onclick="toggleDay(${i})">
+        <div class="day-num-badge" style="${isToday ? 'background:var(--brand);color:#fff' : ''}">${i + 1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;display:flex;align-items:center;gap:7px">
+            ${esc(w.day)}
+            ${isToday ? '<span class="badge badge-brand" style="font-size:.65rem;padding:2px 7px">Today</span>' : ''}
+          </div>
+          <div style="font-size:.75rem;color:var(--text-2);margin-top:2px">${w.exercises.length} exercises</div>
+          ${muscles.length ? `<div class="muscle-chips">${muscles.map(m => `<div class="muscle-chip-sm">${m}</div>`).join('')}</div>` : ''}
+        </div>
+        <svg class="day-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="day-card-body" id="day-body-${i}">
+        <div style="padding:0 16px 16px;border-top:1px solid var(--border);margin-top:0;padding-top:12px">
+          <div style="display:flex;flex-direction:column">
+            ${w.exercises.map(ex => `
+              <div class="ex-row">
+                <div>
+                  <div class="ex-row-name">${esc(ex.name)}</div>
+                  ${ex.notes ? `<div style="font-size:.72rem;color:var(--text-3);margin-top:2px">${esc(ex.notes)}</div>` : ''}
+                </div>
+                <div class="ex-row-meta" style="text-align:right;flex-shrink:0;padding-left:12px">
+                  <div>${ex.sets} × ${ex.reps}</div>
+                  <div style="font-size:.7rem">${ex.rest}s rest</div>
+                </div>
+              </div>`).join('')}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <a href="workout-current.html" class="btn btn-primary btn-sm" style="flex:1"
+               onclick="sessionStorage.setItem('fitos_active_day','${i}')">
+              ▶ Start ${esc(w.day)}
+            </a>
+            <button class="btn btn-secondary btn-sm"
+              onclick="copyDayToClipboard(${i})" title="Copy workout to clipboard">
+              📋
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDay(i) {
+  const card = document.getElementById(`day-card-${i}`);
+  const body = document.getElementById(`day-body-${i}`);
+  const isOpen = card.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.day-card.open').forEach(c => c.classList.remove('open'));
+  document.querySelectorAll('.day-card-body').forEach(b => { b.style.display = 'none'; });
+  if (!isOpen) {
+    card.classList.add('open');
+    body.style.display = 'block';
+  }
+}
+
+function renderStats(logs) {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthly = logs.filter(l => {
+    const ts = l.createdAt?.toDate?.() || (l.createdAt ? new Date(l.createdAt) : null) || new Date(0);
+    return ts >= monthStart;
+  });
+
+  const total = monthly.length;
+  const volume = monthly.reduce((s, l) => s + (l.totalSets || 0), 0);
+  const durations = monthly.filter(l => l.duration).map(l => l.duration);
+  const avgDur = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
+  const streak = calcStreak(logs);
+
+  document.getElementById('stat-total').textContent = total || '0';
+  document.getElementById('stat-volume').textContent = volume || '0';
+  document.getElementById('stat-duration').textContent = avgDur ? avgDur + 'm' : '—';
+  document.getElementById('stat-streak').textContent = streak;
+
+  // Highlight cards if doing well
+  if (total >= 10) document.getElementById('stat-card-workouts').classList.add('highlight');
+  if (streak >= 2) document.getElementById('stat-card-streak').classList.add('highlight');
+}
+
+function renderRecentLogs(logs) {
+  const recentEl = document.getElementById('recent-logs');
+  if (!logs.length) return;
+
+  recentEl.innerHTML = logs.slice(0, 8).map(l => {
+    const date = l.date || l.createdAt?.toDate?.()?.toISOString?.()?.slice(0, 10) || '';
+    const exCount = l.exercises?.length || 0;
+    const sets = l.totalSets || l.exercises?.reduce((s, e) => s + (e.setsCompleted || 0), 0) || 0;
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600">${esc(l.workoutDay) || 'Workout'}</div>
+        <div style="font-size:.75rem;color:var(--text-2)">${formatDate(date)} · ${exCount} exercises · ${l.duration || '?'} min</div>
+        ${sets ? `<div style="font-size:.7rem;color:var(--text-3)">${sets} sets completed</div>` : ''}
+      </div>
+      <span class="badge badge-green">✓ Done</span>
+    </div>`;
+  }).join('');
+}
+
+function copyDayToClipboard(i) {
+  if (!activePlan) return;
+  const day = activePlan.weeks[i];
+  const text = `${day.day} — ${activePlan.splitType} Plan\n\n` +
+    day.exercises.map((ex, n) =>
+      `${n + 1}. ${ex.name}\n   ${ex.sets} sets × ${ex.reps} | ${ex.rest}s rest${ex.notes ? '\n   📝 ' + ex.notes : ''}`
+    ).join('\n\n');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('Workout copied to clipboard!', 'success'))
+      .catch(() => showToast('Could not copy. Try again.', 'error'));
+  } else {
+    showToast('Clipboard not supported on this device.', 'error');
+  }
+}
+
+function setupButtons(user, profile) {
+  // Swap Day button
+  document.getElementById('swap-day-btn').addEventListener('click', () => {
+    if (!activePlan?.weeks?.length) {
+      showToast('No plan loaded yet.', 'error'); return;
+    }
+    const listEl = document.getElementById('swap-day-list');
+    listEl.innerHTML = activePlan.weeks.map((w, i) => `
+      <button class="btn btn-secondary btn-full" style="text-align:left;padding:12px 14px"
+        onclick="selectSwapDay(${i})">
+        <strong>${esc(w.day)}</strong>
+        <span style="font-size:.8rem;color:var(--text-2);display:block;margin-top:2px">${w.exercises.length} exercises · ${w.exercises.map(e => e.name).slice(0, 3).map(n => esc(n)).join(', ')}…</span>
+      </button>
+    `).join('');
+    document.getElementById('swap-modal').classList.add('show');
+  });
+
+  // Coach Notes button
+  document.getElementById('coach-notes-btn').addEventListener('click', () => {
+    if (!activePlan) { showToast('No plan loaded.', 'error'); return; }
+    const notes = activePlan.coachNotes || [];
+    const prog = activePlan.progressionRules || {};
+    const listEl = document.getElementById('coach-notes-list');
+    listEl.innerHTML = notes.length
+      ? notes.map(n => `<div class="coach-note"><span>💬</span><span>${esc(n)}</span></div>`).join('')
+      : '<div style="color:var(--text-2);font-size:.85rem">No coach notes available.</div>';
+
+    const progEl = document.getElementById('coach-progression');
+    progEl.innerHTML = prog.type ? `
+      <div class="section-title" style="margin-bottom:10px">Progression Rules</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <div class="prog-badge">📈 ${esc(prog.type)}</div>
+        <div class="prog-badge">Upper +${prog.upperIncrement || 1.25}kg/session</div>
+        <div class="prog-badge">Lower +${prog.lowerIncrement || 2.5}kg/session</div>
+        <div class="prog-badge">Deload every ${prog.deloadEveryWeeks || 6} weeks</div>
+      </div>` : '';
+
+    document.getElementById('coach-notes-modal').classList.add('show');
+  });
+
+  // AI Plan Rebuild button
+  document.getElementById('ai-plan-btn').addEventListener('click', () => {
+    // Show profile summary
+    const p = userProfile || {};
+    const summary = [
+      p.name ? `👤 ${p.name}` : null,
+      p.age ? `🎂 Age ${p.age}` : null,
+      p.primaryGoal ? `🎯 Goal: ${p.primaryGoal}` : null,
+      p.fitnessLevel ? `💪 Level: ${p.fitnessLevel}` : null,
+      p.workoutDays ? `📅 ${p.workoutDays} days/week` : null,
+      p.workoutDuration ? `⏱️ ${p.workoutDuration}/session` : null,
+      Array.isArray(p.equipment) ? `🏋️ Equipment: ${p.equipment.join(', ')}` : null,
+      Array.isArray(p.injuries) && p.injuries.filter(i => i !== 'No injuries').length
+        ? `⚠️ Injuries: ${p.injuries.filter(i => i !== 'No injuries').join(', ')}` : null,
+    ].filter(Boolean);
+
+    document.getElementById('ai-profile-summary').innerHTML = summary.length
+      ? summary.map(s => `<div>${esc(s)}</div>`).join('')
+      : '<div style="color:var(--text-2)">No profile data found. <a href="onboarding.html">Complete onboarding</a> first.</div>';
+
+    document.getElementById('ai-step-confirm').style.display = 'block';
+    document.getElementById('ai-step-generating').style.display = 'none';
+    document.getElementById('ai-step-done').style.display = 'none';
+    document.getElementById('ai-modal').classList.add('show');
+  });
+}
+
+function selectSwapDay(i) {
+  sessionStorage.setItem('fitos_active_day', String(i));
+  document.getElementById('swap-modal').classList.remove('show');
+  showToast(`Switched to ${activePlan.weeks[i].day}!`, 'success');
+  setTimeout(() => { location.href = 'workout-current.html'; }, 500);
+}
+
+function closeAIModal() {
+  document.getElementById('ai-modal').classList.remove('show');
+}
+
+async function runAIPlanBuild() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  // Switch to generating step
+  document.getElementById('ai-step-confirm').style.display = 'none';
+  document.getElementById('ai-step-generating').style.display = 'block';
+  document.getElementById('ai-confirm-btn').disabled = true;
+
+  const streamBox = document.getElementById('ai-stream-box');
+
+  function streamLog(msg) {
+    streamBox.innerHTML = '';
+    const div = document.createElement('div');
+    div.textContent = msg;
+    streamBox.appendChild(div);
+  }
+
+  try {
+    const profile = userProfile || {};
+
+    // Animated intelligence steps
+    const steps = [
+      `🔍 Reading your profile…`,
+      `🎯 Goal detected: ${profile.primaryGoal || 'General Fitness'}`,
+      `💪 Level: ${profile.fitnessLevel || 'Beginner'}`,
+      `📅 Training ${profile.workoutDays || 4} days/week (${profile.workoutDuration || '60 minutes'}/session)`,
+      `🏋️ Equipment: ${(Array.isArray(profile.equipment) ? profile.equipment : ['Bodyweight Only']).join(', ')}`,
+      profile.injuries?.filter(i => i !== 'No injuries').length
+        ? `⚠️ Injuries noted: ${profile.injuries.filter(i => i !== 'No injuries').join(', ')} — programming around these`
+        : `✅ No injuries — full exercise library available`,
+      `🧠 Selecting optimal split…`,
+      `⚙️ Tuning sets, reps, and rest periods for your goal…`,
+      `📋 Building your weekly schedule…`,
+      `✨ Finalizing coach notes and progression rules…`,
+    ];
+
+    for (const step of steps) {
+      streamLog(step);
+      await new Promise(r => setTimeout(r, 350));
+    }
+
+    // Archive old plan
+    if (activePlan?.planId) {
+      await FS.archivePlan(activePlan.planId);
+    }
+
+    // Generate new plan
+    const newPlan = generatePlan(profile);
+    await FS.createPlan(user.uid, newPlan);
+
+    document.getElementById('ai-step-generating').style.display = 'none';
+    document.getElementById('ai-step-done').style.display = 'block';
+    document.getElementById('ai-done-summary').textContent =
+      `Your new ${newPlan.splitType} plan is ready — ${newPlan.workoutDays} days/week, built for ${newPlan.primaryGoal}. ${(newPlan.weeks || []).reduce((s, w) => s + w.exercises.length, 0)} exercises total.`;
+
+  } catch (e) {
+    console.error(e);
+    streamLog('❌ Something went wrong. Please try again.');
+    document.getElementById('ai-confirm-btn').disabled = false;
+    document.getElementById('ai-step-confirm').style.display = 'block';
+    document.getElementById('ai-step-generating').style.display = 'none';
+    showToast('Could not generate plan. Please try again.', 'error');
+  }
+}
+
+// Close modals on backdrop click
+document.getElementById('swap-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('swap-modal')) e.target.classList.remove('show');
+});
+document.getElementById('coach-notes-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('coach-notes-modal')) e.target.classList.remove('show');
+});
+document.getElementById('ai-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('ai-modal')) closeAIModal();
+});
+
+// ── Difficulty-adjusted plan rebuild ──────────────────────
+async function rebuildPlanAtDifficulty(uid, profile, difficulty) {
+  try {
+    const adjusted = { ...profile };
+    const levels = ['Complete Beginner', 'Beginner', 'Intermediate', 'Advanced', 'Elite'];
+    const currentIdx = levels.indexOf(adjusted.fitnessLevel || 'Beginner');
+
+    if (difficulty === 'easier') {
+      adjusted.fitnessLevel = levels[Math.max(0, currentIdx - 1)];
+      if (currentIdx === 0) {
+        adjusted.workoutDays = Math.max(2, (parseInt(adjusted.workoutDays) || 3) - 1);
+      }
+    } else {
+      adjusted.fitnessLevel = levels[Math.min(levels.length - 1, currentIdx + 1)];
+    }
+
+    if (adjusted.fitnessLevel === profile.fitnessLevel && difficulty === 'easier') {
+      showToast('Already at the lowest difficulty! Try reducing sets or weight instead.', 'info');
+      return;
+    }
+
+    if (activePlan && activePlan.planId) await FS.archivePlan(activePlan.planId);
+
+    const newPlan = generatePlan(adjusted);
+    newPlan.createdForDifficulty = difficulty;
+    await FS.createPlan(uid, newPlan);
+
+    showToast('New plan created! Reloading...', 'success');
+    setTimeout(function() { location.reload(); }, 1200);
+  } catch (e) {
+    console.error(e);
+    showToast('Could not rebuild plan. Please try again.', 'error');
+  }
+}
+
+</script>

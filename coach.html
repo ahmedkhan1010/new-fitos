@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#f7f7fb" id="meta-theme-color"/>
+<title>Coach Center — FitOS</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="loading-screen" id="loading"><div class="spinner"></div></div>
+<div class="app-shell" id="page" style="display:none">
+  <div class="main-content">
+    <div class="topbar">
+      <div class="page-title"><h1>Coach Center</h1><p>Ask a question, get a real answer</p></div>
+      <div class="topbar-actions">
+        <button class="hamburger" id="hamburger" aria-label="Open navigation menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="coach-mode-toggle">
+        <button class="coach-mode-btn active" id="mode-chat-btn">💬 Ask Coach</button>
+        <button class="coach-mode-btn" id="mode-browse-btn">📚 Browse Pathways</button>
+      </div>
+
+      <!-- Diagnostic chatbot mode -->
+      <div id="chat-mode">
+        <div class="breadcrumb-trail" id="breadcrumb"></div>
+        <div class="chat-scroll" id="chat-scroll"></div>
+        <div class="chat-restart-bar">
+          <button class="btn btn-secondary btn-full" id="restart-chat-btn">↺ Start Over</button>
+        </div>
+      </div>
+
+      <!-- Browse pathways mode -->
+      <div id="browse-mode" style="display:none">
+        <!-- Active pathway display -->
+        <div id="active-pathway" style="display:none;margin-bottom:24px"></div>
+
+        <!-- Category tabs -->
+        <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px" id="cat-tabs" class="tab-scroller"></div>
+
+        <!-- Pathways grid -->
+        <div id="pathways-container"></div>
+
+        <!-- History -->
+        <div class="section" style="margin-top:28px">
+          <div class="section-header">
+            <div class="section-title">My Coach History</div>
+            <span id="history-count" class="badge badge-brand">0 sessions</span>
+          </div>
+          <div id="coach-history-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Result modal -->
+<div class="modal-overlay" id="result-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="result-content"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" style="flex:1" id="save-result-btn">Save to My Pathways</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script src="coach-tree.js"></script>
+<script src="nav.js"></script>
+<script>
+// ── Mode switching ──────────────────────────────────────────
+document.getElementById('mode-chat-btn').addEventListener('click', () => switchMode('chat'));
+document.getElementById('mode-browse-btn').addEventListener('click', () => switchMode('browse'));
+function switchMode(mode) {
+  document.getElementById('mode-chat-btn').classList.toggle('active', mode === 'chat');
+  document.getElementById('mode-browse-btn').classList.toggle('active', mode === 'browse');
+  document.getElementById('chat-mode').style.display = mode === 'chat' ? 'block' : 'none';
+  document.getElementById('browse-mode').style.display = mode === 'browse' ? 'block' : 'none';
+}
+
+// ── Diagnostic chatbot state machine ───────────────────────
+let chatPath = []; // array of { nodeId, label } for breadcrumb
+let chatHistorySaved = false;
+
+function startChat() {
+  chatPath = [];
+  chatHistorySaved = false;
+  document.getElementById('chat-scroll').innerHTML = '';
+  renderBreadcrumb();
+  appendBotMessage("Hey! I'm your FitOS coach. Let's figure out what's going on — pick the area that's closest to your issue.");
+  setTimeout(() => renderNode(COACH_TREE_ROOT), 350);
+}
+
+function renderBreadcrumb() {
+  const el = document.getElementById('breadcrumb');
+  if (!chatPath.length) { el.innerHTML = ''; return; }
+  el.innerHTML = chatPath.map(p => `<span>${p.label}</span>`).join('');
+}
+
+function appendBotMessage(text, extraHtml = '') {
+  const scroll = document.getElementById('chat-scroll');
+  const row = document.createElement('div');
+  row.className = 'chat-row bot';
+  row.innerHTML = `
+    <div class="chat-avatar">🤖</div>
+    <div style="flex:1;min-width:0">
+      <div class="chat-bubble">${text}</div>
+      ${extraHtml}
+    </div>`;
+  scroll.appendChild(row);
+  scroll.scrollTop = scroll.scrollHeight;
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  return row;
+}
+
+function appendUserMessage(text) {
+  const scroll = document.getElementById('chat-scroll');
+  const row = document.createElement('div');
+  row.className = 'chat-row user';
+  row.innerHTML = `<div class="chat-bubble">${text}</div>`;
+  scroll.appendChild(row);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function showTypingIndicator() {
+  const scroll = document.getElementById('chat-scroll');
+  const row = document.createElement('div');
+  row.className = 'chat-row bot';
+  row.id = 'typing-indicator';
+  row.innerHTML = `<div class="chat-avatar">🤖</div><div class="chat-bubble chat-typing"><span></span><span></span><span></span></div>`;
+  scroll.appendChild(row);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+function removeTypingIndicator() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+function renderNode(nodeId) {
+  const node = COACH_TREE[nodeId];
+  if (!node) { renderNode('fallback'); return; }
+
+  if (node.resolution) {
+    renderResolution(node.resolution, nodeId);
+    return;
+  }
+
+  showTypingIndicator();
+  setTimeout(() => {
+    removeTypingIndicator();
+    const row = appendBotMessage(node.prompt);
+    const optsWrap = document.createElement('div');
+    optsWrap.className = 'chat-options';
+    node.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'chat-option-btn';
+      btn.innerHTML = `<span>${opt.label}</span><span class="arrow">→</span>`;
+      btn.addEventListener('click', () => {
+        optsWrap.querySelectorAll('button').forEach(b => b.disabled = true);
+        optsWrap.style.opacity = '.5';
+        appendUserMessage(opt.label);
+        chatPath.push({ nodeId: opt.next, label: opt.label.replace(/^[^\w]+/, '').trim() });
+        renderBreadcrumb();
+        setTimeout(() => renderNode(opt.next), 280);
+      });
+      optsWrap.appendChild(btn);
+    });
+    row.parentElement.appendChild(optsWrap);
+    document.getElementById('chat-scroll').scrollTop = document.getElementById('chat-scroll').scrollHeight;
+  }, 450);
+}
+
+function renderResolution(resolution, nodeId) {
+  showTypingIndicator();
+  setTimeout(() => {
+    removeTypingIndicator();
+    const severityClass = resolution.severity === 'high' ? 'severity-high' : '';
+    const icon = resolution.severity === 'high' ? '⚠️' : '✅';
+    const ctaHtml = resolution.actions
+      ? resolution.actions.map(a =>
+          `<a href="${a.href}" class="btn ${a.style === 'primary' ? 'btn-primary' : 'btn-secondary'} btn-sm" style="margin-top:6px;display:flex;align-items:center;justify-content:center">${a.label}</a>`
+        ).join('')
+      : resolution.cta
+        ? `<a href="${resolution.cta.href}" class="btn btn-primary btn-sm" style="margin-top:4px;display:inline-flex">${resolution.cta.label} →</a>`
+        : '';
+    const cardHtml = `
+      <div class="resolution-card ${severityClass}">
+        <h4>${icon} ${resolution.title}</h4>
+        <ul>${resolution.body.map(b => `<li>${b}</li>`).join('')}</ul>
+        ${ctaHtml}
+      </div>`;
+    const row = appendBotMessage("Here's what I'd suggest:", cardHtml);
+
+    const confirmRow = document.createElement('div');
+    confirmRow.className = 'confirm-row';
+    confirmRow.innerHTML = `
+      <button class="btn btn-secondary" id="not-issue-btn">❌ Not my issue</button>
+      <button class="btn btn-primary" id="is-issue-btn">✅ Yes, this is it</button>`;
+    row.parentElement.appendChild(confirmRow);
+
+    document.getElementById('is-issue-btn').addEventListener('click', async () => {
+      confirmRow.innerHTML = '';
+      appendUserMessage('✅ Yes, this is it');
+      appendBotMessage("Glad that helped! Feel free to start over if anything else comes up. 💪");
+      if (!chatHistorySaved) {
+        chatHistorySaved = true;
+        try {
+          await FS.saveCoachHistory(currentUser.uid, {
+            type: 'diagnostic',
+            tag: resolution.tag,
+            title: resolution.title,
+            path: chatPath.map(p => p.label).join(' → '),
+          });
+          loadHistory();
+        } catch (e) {}
+      }
+    });
+
+    document.getElementById('not-issue-btn').addEventListener('click', () => {
+      confirmRow.innerHTML = '';
+      appendUserMessage('❌ Not my issue');
+      // Walk back up to the nearest ancestor question node that has sibling
+      // options we haven't tried, so the user can pick a different branch.
+      offerSiblingOrBacktrack(nodeId);
+    });
+
+    document.getElementById('chat-scroll').scrollTop = document.getElementById('chat-scroll').scrollHeight;
+  }, 450);
+}
+
+function offerSiblingOrBacktrack(resolvedNodeId) {
+  // Find the parent question node of resolvedNodeId by walking the recorded path.
+  // chatPath's last entry led to resolvedNodeId; its parent is the node before that.
+  setTimeout(() => {
+    appendBotMessage("No problem — let's try another angle. Does one of these fit better?", `
+      <div class="chat-options" id="retry-options"></div>
+    `);
+    const retryWrap = document.getElementById('retry-options');
+    const goBackBtn = document.createElement('button');
+    goBackBtn.className = 'chat-option-btn';
+    goBackBtn.innerHTML = `<span>⬅️ Go back a step and pick differently</span><span class="arrow">→</span>`;
+    goBackBtn.addEventListener('click', () => {
+      retryWrap.innerHTML = '';
+      backtrackOneStep();
+    });
+    const restartBtn = document.createElement('button');
+    restartBtn.className = 'chat-option-btn';
+    restartBtn.innerHTML = `<span>🔁 Start over from the main menu</span><span class="arrow">→</span>`;
+    restartBtn.addEventListener('click', () => { retryWrap.innerHTML = ''; startChat(); });
+    const fallbackBtn = document.createElement('button');
+    fallbackBtn.className = 'chat-option-btn';
+    fallbackBtn.innerHTML = `<span>🤷 None of this — flag for the team</span><span class="arrow">→</span>`;
+    fallbackBtn.addEventListener('click', () => { retryWrap.innerHTML = ''; appendUserMessage('Flag for the team'); renderNode('fallback'); });
+    retryWrap.appendChild(goBackBtn);
+    retryWrap.appendChild(restartBtn);
+    retryWrap.appendChild(fallbackBtn);
+  }, 300);
+}
+
+function backtrackOneStep() {
+  // chatPath[i].nodeId is the node we navigated INTO at step i. The resolution
+  // we just rejected lives at chatPath[last].nodeId, whose parent question is
+  // chatPath[last-1].nodeId (or root if there's no earlier step).
+  if (!chatPath.length) { startChat(); return; }
+  chatPath.pop(); // drop the step that led to the rejected resolution
+  const parentNodeId = chatPath.length ? chatPath[chatPath.length - 1].nodeId : COACH_TREE_ROOT;
+  renderBreadcrumb();
+  setTimeout(() => renderNode(parentNodeId), 250);
+}
+
+document.getElementById('restart-chat-btn').addEventListener('click', startChat);
+
+</script>
+<script>
+const COACH_PATHWAYS = {
+  'Strength': [
+    { id:'s1', title:'Beginner Strength Foundation', desc:'Master the 5 core movements before adding weight. Perfect for first-timers.', duration:'4 weeks', level:'Beginner',
+      steps:['Learn hip hinge pattern with Romanian deadlift', 'Establish goblet squat depth & form', 'Push-up progression to bench press', 'Inverted row to barbell row', 'Overhead press mechanics', 'Week 4: Introduce barbell compound movements at light load'],
+      tips:['Never sacrifice form for weight', 'Record yourself — it reveals hidden problems', 'Prioritize sleep: strength is built at rest'],
+      recommendation:'Train 3x/week full body. Add 2.5kg per session when all reps are completed cleanly.'},
+    { id:'s2', title:'Break Your Bench Press Plateau', desc:'Tactical approach to adding 10–20kg to your bench in 8 weeks.', duration:'8 weeks', level:'Intermediate',
+      steps:['Assess weak point: off chest, lockout, or stability', 'Add paused bench 2x/week (2-sec pause at chest)', 'Incline dumbbell press 3x10 as accessory', 'Board press for lockout strength', 'Close-grip bench for tricep lock', 'Spoto press for chest drive', 'Week 7-8: Test max'],
+      tips:['Leg drive adds 5-10% to bench immediately', 'Retract scapula and create a shelf with your upper back', 'Lat engagement: try to "bend the bar"'],
+      recommendation:'Test new max on Week 8. Expect 10-20kg improvement with strict adherence.'},
+    { id:'s3', title:'First Deadlift 100kg', desc:'Structured 6-week program to pull triple digits for the first time.', duration:'6 weeks', level:'Beginner–Intermediate',
+      steps:['Hip hinge pattern mastery', 'Romanian deadlift 4x8 for hamstring base', 'Conventional pull from floor — 5x5 at 60%', 'Weekly 5% load increase', 'Deficit deadlift for improved leverage', 'Week 6: attempt 100kg single'],
+      tips:['Brace your belly like you\'re about to be punched', 'Keep the bar over mid-foot at setup', 'Double overhand grip until 80%+ of target weight'],
+      recommendation:'Pull 2x/week maximum. Never miss reps — drop weight to perfect technique.'},
+    { id:'s4', title:'Overhead Press Mastery', desc:'Build boulder shoulders with a dedicated OHP progression.', duration:'6 weeks', level:'Intermediate',
+      steps:['Assess mobility: can you lock out without lower back extension?', 'Lat stretches daily for shoulder mobility', 'Strict press 5x5 twice weekly', 'Push press for overload', 'Z-press for core stability', 'Bottoms-up KB press for shoulder stability'],
+      tips:['Keep elbows at 45° not flared at 90°', 'Tuck chin as bar passes face', 'Squeeze glutes and brace core throughout'],
+      recommendation:'Overhead is the hardest lift to progress. Expect 1.25kg/week max.'},
+    { id:'s5', title:'1000lb Club Roadmap', desc:'Systematic guide to reaching 1000lb total (squat+bench+deadlift).', duration:'16 weeks', level:'Advanced',
+      steps:['Audit current maxes and identify weakest lift', 'Prioritize lagging lift for first 8 weeks', 'Peak all three lifts in weeks 13-16', 'Test total on week 16'],
+      tips:['1000lb typically requires years of training', 'Sleep and nutrition are as important as training', 'Consider a powerlifting meet for motivation'],
+      recommendation:'Realistic for intermediate lifters in 12-24 months from consistent training start.'},
+  ],
+  'Fat Loss': [
+    { id:'f1', title:'10,000 Steps Method', desc:'Simple, sustainable fat loss through daily step targets. No cardio gym needed.', duration:'Ongoing', level:'All Levels',
+      steps:['Baseline: track daily steps for 1 week', 'Add 1,000 steps per week until reaching 10,000', 'Use walking meetings, stairs, park further away', 'Morning 20-min walk: sets fat-burning tone for the day', 'Evening walk: improves sleep and digestion', 'Maintain resistance training 3x/week concurrently'],
+      tips:['10k steps burns ~300-500 kcal daily', 'Walking is lowest-cortisol cardio — preserves muscle', 'Listen to podcasts or music to make it automatic'],
+      recommendation:'Combine with 300-500 kcal daily deficit. Expect 0.5-1kg fat loss per week.'},
+    { id:'f2', title:'Carb Cycling for Fat Loss', desc:'Strategic carb timing around workouts for maximum fat burning with minimal muscle loss.', duration:'8 weeks', level:'Intermediate',
+      steps:['Calculate TDEE and set targets', 'High carb days (training days): carbs at 40% of calories', 'Low carb days (rest days): carbs at 15-20% of calories', 'Protein stays constant at 2.2g/kg every day', 'Fat fills remaining calories', 'Track weight daily — use weekly average'],
+      tips:['Don\'t fear carbs on training days — they fuel performance', 'Low carb days: prioritize vegetables and fiber', 'Weigh yourself at same time each morning'],
+      recommendation:'Best for those who have hit a fat loss plateau on straight deficit.'},
+    { id:'f3', title:'Intermittent Fasting 16:8', desc:'Compress eating window to 8 hours for effortless calorie reduction.', duration:'Ongoing', level:'All Levels',
+      steps:['Choose your 8-hour window (e.g. 12pm-8pm)', 'Break fast with protein-first meal', 'Black coffee/tea permitted during fast', '2 large meals within window preferred over many small', 'Stay hydrated — 3L+ water daily', 'Train in fasted state or just before first meal'],
+      tips:['IF is a schedule, not a diet — total calories still matter', 'Hunger adapts in 7-10 days', 'Combine with 300-500 kcal deficit for best results'],
+      recommendation:'Works best for people who skip breakfast naturally. Not suitable for athletes training twice daily.'},
+  ],
+  'Mobility': [
+    { id:'m1', title:'Hip Mobility Unlock', desc:'Fix tight hips that are limiting your squat depth and deadlift mechanics.', duration:'4 weeks', level:'All Levels',
+      steps:['Pigeon pose: 90 sec each side daily', '90-90 hip stretch: 2 min each position', 'World\'s greatest stretch: 5 reps each side', 'Couch stretch: 90 sec each leg', 'Hip CARs (controlled articular rotations): 10 reps each', 'Deep squat holds with heel elevation: progress to flat feet'],
+      tips:['Do mobility work DAILY not just on training days', 'Breathe deeply into the stretch', 'Heat or hot shower before stretching improves results'],
+      recommendation:'Expect meaningful improvement in squat depth within 2-3 weeks of daily practice.'},
+    { id:'m2', title:'Shoulder Health Protocol', desc:'Prevent and heal shoulder issues. Essential for anyone pressing heavy.', duration:'Ongoing', level:'All Levels',
+      steps:['Band pull-aparts: 30 reps daily', 'Face pulls: 20 reps, light weight, every session', 'External rotation drills with band or light DB', 'Thoracic spine mobility: foam roll T-spine daily', 'Sleeper stretch for posterior capsule', 'Overhead mobility: wall slides'],
+      tips:['70% of shoulder injuries are preventable with these basics', 'Pain ≠ gain — never train through sharp shoulder pain', 'Rowing volume should match pressing volume'],
+      recommendation:'Add to every training session as warm-up and cool-down protocol.'},
+    { id:'m3', title:'Desk Worker\'s Body Fix', desc:'Combat the damage of sitting 8+ hours per day.', duration:'4 weeks', level:'All Levels',
+      steps:['Hip flexor stretch (kneeling lunge): 90 sec each', 'Chest opener: doorway stretch or pec minor stretch', 'Thoracic extension over foam roller', 'Chin tucks: 15 reps, 3x daily', 'Glute activation: clamshells and bridges before every workout', 'Standing desk or hourly walk breaks'],
+      tips:['Every hour of sitting requires 5 min of movement', 'Set a phone alarm to stand and move every 45-60 min', 'Sleep position matters too — avoid fetal position'],
+      recommendation:'Complete this as a 10-minute morning routine for 4 weeks. Soreness relief expected within 1 week.'},
+  ],
+  'Nutrition Strategy': [
+    { id:'n1', title:'High Protein Blueprint', desc:'Hit 2g/kg protein daily for muscle growth and fat loss. Practical meal planning.', duration:'Ongoing', level:'All Levels',
+      steps:['Calculate target: bodyweight(kg) × 1.8-2.2g', 'Anchor meals around protein sources', 'Breakfast: 40g protein target (eggs + paneer or chicken)', 'Lunch: 40-50g protein', 'Dinner: 40-50g protein', 'Snacks fill remaining gap: Greek yoghurt, cottage cheese, nuts', 'Track with FitOS nutrition log daily'],
+      tips:['Protein has highest thermic effect: burns 25-30% of its calories in digestion', 'Spread intake evenly — max ~40-50g absorbed per meal for muscle synthesis', 'Casein protein (cottage cheese, paneer) before bed for overnight MPS'],
+      recommendation:'Easiest single change for body composition. Most people eat 60-80g/day when they need 150g+.'},
+    { id:'n2', title:'Indian Athlete Meal Plan', desc:'High-performance nutrition using Indian foods. Dals, roti, paneer — optimized.', duration:'Ongoing', level:'All Levels',
+      steps:['Morning: 4 eggs + 2 roti + 1 glass milk (55g protein)', 'Pre-workout (1hr before): banana + 100g paneer', 'Post-workout: rice + chicken/dal + curd (60g protein)', 'Evening: sprouts chaat + 200g Greek yoghurt', 'Night: 200g paneer OR 4 boiled eggs + salad', 'Supplements: whey protein if deficit, creatine 5g daily'],
+      tips:['Dal + rice is NOT complete protein alone — add paneer or egg', 'Ghee is healthy in moderation (1-2 tsp/meal)', 'Avoid high-fat Indian foods pre/post workout'],
+      recommendation:'Achieves 150-180g protein daily on Indian vegetarian diet.'},
+  ],
+  'Mindset': [
+    { id:'mi1', title:'Consistency Blueprint', desc:'Build unshakeable training habits that last years, not weeks.', duration:'Ongoing', level:'All Levels',
+      steps:['Same training time every day — remove decision fatigue', 'Minimum effective dose: 20-min workout > no workout', 'Pre-commit publicly or to an accountability partner', 'Track streaks — breaking a streak is psychologically costly', 'Identity shift: "I am someone who trains" not "I\'m trying to work out"', 'Design your environment: gym bag packed the night before'],
+      tips:['Motivation is unreliable — systems are everything', 'The best workout is the one you actually do', 'Progress is not linear — expect setbacks without quitting'],
+      recommendation:'Focus on showing up for 90 days. After that, it\'s identity, not willpower.'},
+    { id:'mi2', title:'Overcome Training Plateaus', desc:'Practical strategies for when progress stalls.', duration:'4-6 weeks', level:'Intermediate',
+      steps:['Diagnose: overtraining, under-eating, or poor sleep?', 'Deload week: 40-50% volume at same intensity', 'Change rep ranges: if doing 8-10, switch to 3-5 or 15-20', 'Add variation: change grip, angle, tempo', 'Progressive overload audit: are you actually adding load?', 'Nutrition audit: are calories and protein sufficient?'],
+      tips:['Plateaus are normal. Every elite lifter plateaus.', 'A week of rest often breaks a plateau', 'Changing exercises challenges muscles in new ways'],
+      recommendation:'80% of plateaus resolve with more food, more sleep, or a structured deload.'},
+  ],
+  'Sport Specific': [
+    { id:'sp1', title:'Cricketer\'s Athletic Foundation', desc:'Explosive power, rotational strength, and injury prevention for cricket players.', duration:'8 weeks', level:'All Levels',
+      steps:['Rotational medicine ball throws: 3x10 each side', 'Broad jumps for explosive lower body power', 'Single-leg Romanian deadlift for hamstring resilience', 'Pallof press for anti-rotation core strength', 'Lateral band walks for hip stability', 'Sprint intervals (20m): 6x with full recovery'],
+      tips:['Cricket demands acceleration, not endurance', 'Shoulder health is critical for bowlers — face pulls every session', 'Single-leg work reduces injury risk significantly'],
+      recommendation:'Prioritize during off-season. Reduce volume by 40% during match season.'},
+    { id:'sp2', title:'Runner\'s Strength Plan', desc:'Strength training for runners to improve pace and prevent injury.', duration:'12 weeks', level:'All Levels',
+      steps:['Hip abductor strengthening: clamshells and lateral band walks', 'Single-leg squat progressions', 'Nordic hamstring curls for hamstring injury prevention', 'Calf raises (both straight and bent knee)', 'Hip flexor and quad mobility', 'Plyometrics: box jumps, depth drops in weeks 8-12'],
+      tips:['Most running injuries are hip weakness — not foot problems', 'Strength train on same day as easy runs, not hard workouts', '2x/week strength is sufficient for runners'],
+      recommendation:'Combine with your running plan. Run easy on strength days.'},
+  ],
+};
+
+let currentUser, activeCat = 'Strength', activePathway = null;
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('page').style.display = 'flex';
+  buildNav('coach.html');
+  startChat();
+  renderCategoryTabs();
+  renderPathways();
+  loadHistory();
+});
+
+function renderCategoryTabs() {
+  const cats = Object.keys(COACH_PATHWAYS);
+  document.getElementById('cat-tabs').innerHTML = cats.map(c => `
+    <button onclick="switchCat('${c}')" id="cat-${c.replace(/\s/g,'-')}"
+      class="btn ${c===activeCat?'btn-primary':'btn-secondary'} btn-sm" style="white-space:nowrap;flex-shrink:0">${c}</button>`).join('');
+}
+
+function switchCat(cat) {
+  activeCat = cat;
+  renderCategoryTabs();
+  renderPathways();
+}
+
+function renderPathways() {
+  const pathways = COACH_PATHWAYS[activeCat] || [];
+  document.getElementById('pathways-container').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${pathways.map(p => `
+        <div class="pathway-card" onclick="openPathway('${p.id}')">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <div class="pathway-title">${p.title}</div>
+              <span class="badge badge-brand" style="flex-shrink:0">${p.level}</span>
+            </div>
+            <div class="pathway-meta">${p.desc}</div>
+            <div style="font-size:.75rem;color:var(--text-3);margin-top:4px">⏱ ${p.duration} · ${p.steps.length} steps</div>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text-3);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>`).join('')}
+    </div>`;
+}
+
+function openPathway(id) {
+  let found = null;
+  for (const cat of Object.values(COACH_PATHWAYS)) {
+    found = cat.find(p => p.id === id);
+    if (found) break;
+  }
+  if (!found) return;
+  activePathway = found;
+  const el = document.getElementById('result-content');
+  el.innerHTML = `
+    <div class="modal-title">${found.title}</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <span class="badge badge-brand">${found.level}</span>
+      <span class="badge badge-purple">⏱ ${found.duration}</span>
+    </div>
+    <p style="color:var(--text-2);font-size:.875rem;margin-bottom:16px">${found.desc}</p>
+    <div style="margin-bottom:16px">
+      <div style="font-size:.875rem;font-weight:700;margin-bottom:8px">📋 Step-by-Step Plan</div>
+      ${found.steps.map((s,i) => `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+        <span style="color:var(--brand);font-weight:700;flex-shrink:0">${i+1}.</span>
+        <span style="color:var(--text-2)">${s}</span>
+      </div>`).join('')}
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:.875rem;font-weight:700;margin-bottom:8px">💡 Pro Tips</div>
+      ${found.tips.map(t => `<div style="display:flex;gap:8px;padding:6px 0;font-size:.8125rem;color:var(--text-2)">
+        <span>•</span><span>${t}</span>
+      </div>`).join('')}
+    </div>
+    <div class="alert alert-brand">
+      <span style="font-size:.875rem;font-weight:600">🏆 Coach Recommendation:<br><span style="font-weight:400">${found.recommendation}</span></span>
+    </div>`;
+  document.getElementById('result-modal').classList.add('show');
+}
+
+document.getElementById('save-result-btn').addEventListener('click', async () => {
+  if (!activePathway) return;
+  try {
+    await FS.saveCoachHistory(currentUser.uid, {
+      pathwayId:    activePathway.id,
+      pathwayTitle: activePathway.title,
+      category:     activeCat,
+      level:        activePathway.level,
+      duration:     activePathway.duration,
+    });
+    showToast('Pathway saved to your history!', 'success');
+    closeModal();
+    loadHistory();
+  } catch(e) {
+    showToast('Error saving. Try again.', 'error');
+  }
+});
+
+function closeModal() {
+  document.getElementById('result-modal').classList.remove('show');
+  activePathway = null;
+}
+document.getElementById('result-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('result-modal')) closeModal();
+});
+
+async function loadHistory() {
+  const history = await FS.getCoachHistory(currentUser.uid);
+  document.getElementById('history-count').textContent = `${history.length} sessions`;
+  const el = document.getElementById('coach-history-list');
+  if (!history.length) {
+    el.innerHTML = '<div class="empty" style="padding:20px 0"><div class="empty-icon">🧠</div><p>No history yet. Ask the coach a question or save a pathway above.</p></div>';
+    return;
+  }
+  el.innerHTML = history.slice(0, 10).map(h => {
+    const isDiagnostic = h.type === 'diagnostic';
+    const title = isDiagnostic ? h.title : h.pathwayTitle;
+    const subtitle = isDiagnostic ? `💬 ${h.path || 'Coach chat'}` : `${h.category} · ${h.level} · ${h.duration}`;
+    const rawDate = h.createdAt?.toDate ? h.createdAt.toDate() : (h.createdAt ? new Date(h.createdAt) : null);
+    return `
+    <div class="card card-sm" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="min-width:0">
+        <div style="font-weight:600;font-size:.9rem">${title}</div>
+        <div style="font-size:.75rem;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${subtitle}</div>
+      </div>
+      <div style="font-size:.75rem;color:var(--text-3);flex-shrink:0">${rawDate ? formatDate(rawDate.toISOString().slice(0,10)) : ''}</div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
